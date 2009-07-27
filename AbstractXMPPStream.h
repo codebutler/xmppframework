@@ -92,4 +92,14 @@
 
 - (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag;
 
+// These should all be "protected" methods.
+- (void)setup;
+- (void)sendOpeningNegotiation;
+- (void)handleStreamFeatures;
+- (void)handleRegistration:(NSXMLElement *)response;
+- (void)handleAuth1:(NSXMLElement *)response;
+- (void)handleAuth2:(NSXMLElement *)response;
+- (void)handleBinding:(NSXMLElement *)response;
+- (void)handleStartSessionResponse:(NSXMLElement *)response;
+
 @end

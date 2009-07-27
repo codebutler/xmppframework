@@ -38,6 +38,7 @@ enum XMPPClientFlags
 - (void)onDidReceiveIQ:(XMPPIQ *)iq;
 - (void)onDidReceiveMessage:(XMPPMessage *)message;
 
+- (void)xmppStream:(AbstractXMPPStream *)sender didReceivePresence:(XMPPPresence *)presence;
 @end
 
 @implementation XMPPClient

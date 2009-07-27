@@ -1,12 +1,12 @@
 #import "NSXMLElementAdditions.h"
 #import "NSDataAdditions.h"
 
+#import "XMPPStreamDelegate.h"
+#import "XMPPDigestAuthentication.h"
+
 #import "AbstractXMPPStream.h"
 
-
 @implementation AbstractXMPPStream
-
-
 
 /**
  * Initializes an XMPPStream with no delegate.
@@ -41,6 +41,10 @@
 	return self;
 }
 
+- (void)setup
+{
+	[self doesNotRecognizeSelector:_cmd];
+}
 
 /**
  * The standard deallocation method.
@@ -171,6 +175,496 @@
 - (void)disconnectAfterSending
 {
 	[self doesNotRecognizeSelector:_cmd];
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark Stream Negotiation:
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * This method handles sending the opening <stream:stream ...> element which is needed in several situations.
+ **/
+- (void)sendOpeningNegotiation
+{
+	if(state == STATE_CONNECTING)
+	{
+		// TCP connection was just opened - We need to include the opening XML stanza
+		NSString *s1 = @"<?xml version='1.0'?>";
+		
+		if(DEBUG_SEND) {
+			NSLog(@"SEND: %@", s1);
+		}
+		[self writeData:[s1 dataUsingEncoding:NSUTF8StringEncoding]
+				   withTimeout:TIMEOUT_WRITE
+						   tag:TAG_WRITE_START];
+	}
+	
+	NSString *xmlns = @"jabber:client";
+	NSString *xmlns_stream = @"http://etherx.jabber.org/streams";
+	
+	NSString *temp, *s2;
+	if([xmppHostName length] > 0)
+	{
+		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0' to='%@'>";
+		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream, xmppHostName];
+	}
+	else
+	{
+		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0'>";
+		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream];
+	}
+	
+	if(DEBUG_SEND) {
+		NSLog(@"SEND: %@", s2);
+	}
+	[self writeData:[s2 dataUsingEncoding:NSUTF8StringEncoding]
+			   withTimeout:TIMEOUT_WRITE
+					   tag:TAG_WRITE_START];
+	
+	// Update status
+	state = STATE_OPENING;
+}
+
+/**
+ * This method is called anytime we receive the server's stream features.
+ * This method looks at the stream features, and handles any requirements so communication can continue.
+ **/
+- (void)handleStreamFeatures
+{
+	// Extract the stream features
+	NSXMLElement *features = [rootElement elementForName:@"stream:features"];
+	
+	// Check to see if TLS is required
+	// Don't forget about that NSXMLElement bug you reported to apple (xmlns is required or element won't be found)
+	NSXMLElement *f_starttls = [features elementForName:@"starttls" xmlns:@"urn:ietf:params:xml:ns:xmpp-tls"];
+	
+	if(f_starttls)
+	{
+		if([f_starttls elementForName:@"required"])
+		{
+			// TLS is required for this connection
+			state = STATE_STARTTLS;
+			
+			NSString *starttls = @"<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", starttls);
+			}
+			[self writeData:[starttls dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+			
+			// We're already listening for the response...
+			return;
+		}
+	}
+	
+	// Check to see if resource binding is required
+	// Don't forget about that NSXMLElement bug you reported to apple (xmlns is required or element won't be found)
+	NSXMLElement *f_bind = [features elementForName:@"bind" xmlns:@"urn:ietf:params:xml:ns:xmpp-bind"];
+	
+	if(f_bind)
+	{
+		// Binding is required for this connection
+		state = STATE_BINDING;
+		
+		if([authResource length] > 0)
+		{
+			// Ask the server to bind the user specified resource
+			
+			NSXMLElement *resource = [NSXMLElement elementWithName:@"resource"];
+			[resource setStringValue:authResource];
+			
+			NSXMLElement *bind = [NSXMLElement elementWithName:@"bind" xmlns:@"urn:ietf:params:xml:ns:xmpp-bind"];
+			[bind addChild:resource];
+			
+			NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
+			[iq addAttributeWithName:@"type" stringValue:@"set"];
+			[iq addChild:bind];
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", iq);
+			}
+			[self writeData:[[iq XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+		}
+		else
+		{
+			// The user didn't specify a resource, so we ask the server to bind one for us
+			
+			NSXMLElement *bind = [NSXMLElement elementWithName:@"bind" xmlns:@"urn:ietf:params:xml:ns:xmpp-bind"];
+			
+			NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
+			[iq addAttributeWithName:@"type" stringValue:@"set"];
+			[iq addChild:bind];
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", iq);
+			}
+			[self writeData:[[iq XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+		}
+		
+		// We're already listening for the response...
+		return;
+	}
+	
+	// It looks like all has gone well, and the connection should be ready to use now
+	state = STATE_CONNECTED;
+	
+	if(!isAuthenticated)
+	{
+		// Setup keep alive timer
+		[keepAliveTimer invalidate];
+		[keepAliveTimer release];
+		keepAliveTimer = [[NSTimer scheduledTimerWithTimeInterval:300
+														   target:self
+														 selector:@selector(keepAlive:)
+														 userInfo:nil
+														  repeats:YES] retain];
+		
+		// Notify delegate
+		if([delegate respondsToSelector:@selector(xmppStreamDidOpen:)]) {
+			[delegate xmppStreamDidOpen:self];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStreamDidOpen:%p", self);
+		}
+	}
+}
+
+/**
+ * After the registerUser:withPassword: method is invoked, a registration message is sent to the server.
+ * We're waiting for the result from this registration request.
+ **/
+- (void)handleRegistration:(NSXMLElement *)response
+{
+	if([[[response attributeForName:@"type"] stringValue] isEqualToString:@"error"])
+	{
+		// Revert back to connected state (from authenticating state)
+		state = STATE_CONNECTED;
+		
+		if([delegate respondsToSelector:@selector(xmppStream:didNotRegister:)]) {
+			[delegate xmppStream:self didNotRegister:response];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStream:%p didNotRegister:%@", self, [response XMLString]);
+		}
+	}
+	else
+	{
+		// Revert back to connected state (from authenticating state)
+		state = STATE_CONNECTED;
+		
+		if([delegate respondsToSelector:@selector(xmppStreamDidRegister:)]) {
+			[delegate xmppStreamDidRegister:self];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStreamDidRegister:%p", self);
+		}
+	}
+}
+
+/**
+ * After the authenticateUser:withPassword:resource method is invoked, a authentication message is sent to the server.
+ * If the server supports digest-md5 sasl authentication, it is used.  Otherwise plain sasl authentication is used,
+ * assuming the server supports it.
+ * 
+ * Now if digest-md5 was used, we sent a challenge request, and we're waiting for a challenge response.
+ * If plain sasl was used, we sent our authentication information, and we're waiting for a success response.
+ **/
+- (void)handleAuth1:(NSXMLElement *)response
+{
+	if([self supportsDigestMD5Authentication])
+	{
+		// We're expecting a challenge response
+		// If we get anything else we can safely assume it's the equivalent of a failure response
+		if(![[response name] isEqualToString:@"challenge"])
+		{
+			// Revert back to connected state (from authenticating state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+				[delegate xmppStream:self didNotAuthenticate:response];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+			}
+		}
+		else
+		{
+			// Create authentication object from the given challenge
+			// We'll release this object at the end of this else block
+			XMPPDigestAuthentication *auth = [[XMPPDigestAuthentication alloc] initWithChallenge:response];
+			
+			// Sometimes the realm isn't specified
+			// In this case I believe the realm is implied as the virtual host name
+			if(![auth realm])
+			{
+				if([xmppHostName length] > 0)
+					[auth setRealm:xmppHostName];
+				else
+					[auth setRealm:serverHostName];
+			}
+			
+			// Set digest-uri
+			if([xmppHostName length] > 0)
+				[auth setDigestURI:[NSString stringWithFormat:@"xmpp/%@", xmppHostName]];
+			else
+				[auth setDigestURI:[NSString stringWithFormat:@"xmpp/%@", serverHostName]];
+			
+			// Set username and password
+			[auth setUsername:authUsername password:tempPassword];
+			
+			// Create and send challenge response element
+			NSXMLElement *cr = [NSXMLElement elementWithName:@"response" xmlns:@"urn:ietf:params:xml:ns:xmpp-sasl"];
+			[cr setStringValue:[auth base64EncodedFullResponse]];
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", [cr XMLString]);
+			}
+			[self writeData:[[cr XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+			
+			// Release unneeded resources
+			[auth release];
+			[tempPassword release]; tempPassword = nil;
+			
+			// Update state
+			state = STATE_AUTH_2;
+		}
+	}
+	else if([self supportsPlainAuthentication])
+	{
+		// We're expecting a success response
+		// If we get anything else we can safely assume it's the equivalent of a failure response
+		if(![[response name] isEqualToString:@"success"])
+		{
+			// Revert back to connected state (from authenticating state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+				[delegate xmppStream:self didNotAuthenticate:response];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+			}
+		}
+		else
+		{
+			// We are successfully authenticated (via sasl:plain)
+			isAuthenticated = YES;
+			
+			// Now we start our negotiation over again...
+			[self sendOpeningNegotiation];
+		}
+	}
+	else
+	{
+		// We used the old fashioned jabber:iq:auth mechanism
+		
+		if([[[response attributeForName:@"type"] stringValue] isEqualToString:@"error"])
+		{
+			// Revert back to connected state (from authenticating state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+				[delegate xmppStream:self didNotAuthenticate:response];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+			}
+		}
+		else
+		{
+			// We are successfully authenticated (via non-sasl:digest)
+			// And we've binded our resource as well
+			isAuthenticated = YES;
+			
+			// Revert back to connected state (from authenticating state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStreamDidAuthenticate:)]) {
+				[delegate xmppStreamDidAuthenticate:self];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStreamDidAuthenticate:%p", self);
+			}
+		}
+	}
+}
+
+/**
+ * This method handles the result of our challenge response we sent in handleAuth1 using digest-md5 sasl.
+ **/
+- (void)handleAuth2:(NSXMLElement *)response
+{
+	if([[response name] isEqualToString:@"challenge"])
+	{
+		XMPPDigestAuthentication *auth = [[[XMPPDigestAuthentication alloc] initWithChallenge:response] autorelease];
+		
+		if(![auth rspauth])
+		{
+			// We're getting another challenge???
+			// I'm not sure what this could possibly be, so for now I'll assume it's a failure
+			
+			// Revert back to connected state (from authenticating state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+				[delegate xmppStream:self didNotAuthenticate:response];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+			}
+		}
+		else
+		{
+			// We received another challenge, but it's really just an rspauth
+			// This is supposed to be included in the success element (according to the updated RFC)
+			// but many implementations incorrectly send it inside a second challenge request.
+			
+			// Create and send empty challenge response element
+			NSXMLElement *cr = [NSXMLElement elementWithName:@"response" xmlns:@"urn:ietf:params:xml:ns:xmpp-sasl"];
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", [cr XMLString]);
+			}
+			[self writeData:[[cr XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+			
+			// The state remains in STATE_AUTH_2
+		}
+	}
+	else if([[response name] isEqualToString:@"success"])
+	{
+		// We are successfully authenticated (via sasl:digest-md5)
+		isAuthenticated = YES;
+		
+		// Now we start our negotiation over again...
+		[self sendOpeningNegotiation];
+	}
+	else
+	{
+		// We received some kind of <failure/> element
+		
+		// Revert back to connected state (from authenticating state)
+		state = STATE_CONNECTED;
+		
+		if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+			[delegate xmppStream:self didNotAuthenticate:response];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+		}
+	}
+}
+
+- (void)handleBinding:(NSXMLElement *)response
+{
+	NSXMLElement *r_bind = [response elementForName:@"bind" xmlns:@"urn:ietf:params:xml:ns:xmpp-bind"];
+	NSXMLElement *r_jid = [r_bind elementForName:@"jid"];
+	
+	if(r_jid)
+	{
+		// We're properly binded to a resource now
+		// Extract and save our resource (it may not be what we originally requested)
+		NSString *fullJID = [r_jid stringValue];
+		
+		[authResource release];
+		authResource = [[fullJID lastPathComponent] copy];
+		
+		// And we may now have to do one last thing before we're ready - start an IM session
+		NSXMLElement *features = [rootElement elementForName:@"stream:features"];
+		
+		// Check to see if a session is required
+		// Don't forget about that NSXMLElement bug you reported to apple (xmlns is required or element won't be found)
+		NSXMLElement *f_session = [features elementForName:@"session" xmlns:@"urn:ietf:params:xml:ns:xmpp-session"];
+		
+		if(f_session)
+		{
+			NSXMLElement *session = [NSXMLElement elementWithName:@"session"];
+			[session setXmlns:@"urn:ietf:params:xml:ns:xmpp-session"];
+			
+			NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
+			[iq addAttributeWithName:@"type" stringValue:@"set"];
+			[iq addChild:session];
+			
+			if(DEBUG_SEND) {
+				NSLog(@"SEND: %@", iq);
+			}
+			[self writeData:[[iq XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+					   withTimeout:TIMEOUT_WRITE
+							   tag:TAG_WRITE_STREAM];
+			
+			// Update state
+			state = STATE_START_SESSION;
+		}
+		else
+		{
+			// Revert back to connected state (from binding state)
+			state = STATE_CONNECTED;
+			
+			if([delegate respondsToSelector:@selector(xmppStreamDidAuthenticate:)]) {
+				[delegate xmppStreamDidAuthenticate:self];
+			}
+			else if(DEBUG_DELEGATE) {
+				NSLog(@"xmppStreamDidAuthenticate:%p", self);
+			}
+		}
+	}
+	else
+	{
+		// It appears the server didn't allow our resource choice
+		// We'll simply let the server choose then
+		
+		NSXMLElement *bind = [NSXMLElement elementWithName:@"bind" xmlns:@"urn:ietf:params:xml:ns:xmpp-bind"];
+		
+		NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
+		[iq addAttributeWithName:@"type" stringValue:@"set"];
+		[iq addChild:bind];
+		
+		if(DEBUG_SEND) {
+			NSLog(@"SEND: %@", iq);
+		}
+		[self writeData:[[iq XMLString] dataUsingEncoding:NSUTF8StringEncoding]
+				   withTimeout:TIMEOUT_WRITE
+						   tag:TAG_WRITE_STREAM];
+		
+		// The state remains in STATE_BINDING
+	}
+}
+
+- (void)handleStartSessionResponse:(NSXMLElement *)response
+{
+	if([[[response attributeForName:@"type"] stringValue] isEqualToString:@"result"])
+	{
+		// Revert back to connected state (from start session state)
+		state = STATE_CONNECTED;
+		
+		if([delegate respondsToSelector:@selector(xmppStreamDidAuthenticate:)]) {
+			[delegate xmppStreamDidAuthenticate:self];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStreamDidAuthenticate:%p", self);
+		}
+	}
+	else
+	{
+		// Revert back to connected state (from start session state)
+		state = STATE_CONNECTED;
+		
+		if([delegate respondsToSelector:@selector(xmppStream:didNotAuthenticate:)]) {
+			[delegate xmppStream:self didNotAuthenticate:response];
+		}
+		else if(DEBUG_DELEGATE) {
+			NSLog(@"xmppStream:%p didNotAuthenticate:%@", self, [response XMLString]);
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
