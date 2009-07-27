@@ -2,7 +2,7 @@
 
 #import "NSXMLElementAdditions.h"
 
-#import "XMPPStream.h"
+#import "AbstractXMPPStream.h"
 #import "XMPPClient.h"
 #import "XMPPJID.h"
 #import "XMPPUser.h"

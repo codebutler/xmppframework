@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "DDXML.h"
 
-@class XMPPStream;
+@class AbstractXMPPStream;
 @class XMPPJID;
 @class XMPPUser;
 @class XMPPResource;
@@ -10,7 +10,6 @@
 @class XMPPPresence;
 @class MulticastDelegate;
 @class SCNotificationManager;
-
 
 @interface XMPPClient : NSObject
 {
@@ -25,7 +24,7 @@
 	
 	Byte flags;
 	
-	XMPPStream *xmppStream;
+	AbstractXMPPStream *xmppStream;
 	NSError *streamError;
 	
 	NSMutableDictionary *roster;

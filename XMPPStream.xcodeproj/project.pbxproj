@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		075FDD36101CCFEA001DE5FD /* AbstractXMPPStream.m in Sources */ = {isa = PBXBuildFile; fileRef = 075FDD35101CCFEA001DE5FD /* AbstractXMPPStream.m */; };
+		075FDE4F101D70F1001DE5FD /* XMPPDigestAuthentication.m in Sources */ = {isa = PBXBuildFile; fileRef = 075FDE4E101D70F1001DE5FD /* XMPPDigestAuthentication.m */; };
 		276247FD0ED3D66A0028C301 /* SCNotificationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DC63E9F90E65FD570076E6D2 /* SCNotificationManager.m */; };
 		276247FE0ED3D66B0028C301 /* SSCrypto.m in Sources */ = {isa = PBXBuildFile; fileRef = DC0E7D310EADD7DE00B81D90 /* SSCrypto.m */; };
 		276247FF0ED3D66F0028C301 /* AsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55380BDC6290000E2798 /* AsyncSocket.m */; };
@@ -29,8 +31,8 @@
 		276248110ED3D68F0028C301 /* XMPPPresence.m in Sources */ = {isa = PBXBuildFile; fileRef = DCB9BA170DDB73DA002DA335 /* XMPPPresence.m */; };
 		276248120ED3D68F0028C301 /* XMPPResource.h in Headers */ = {isa = PBXBuildFile; fileRef = DCB9BA0D0DDB7237002DA335 /* XMPPResource.h */; };
 		276248130ED3D6900028C301 /* XMPPResource.m in Sources */ = {isa = PBXBuildFile; fileRef = DCB9BA0E0DDB7237002DA335 /* XMPPResource.m */; };
-		276248140ED3D6930028C301 /* XMPPStream.h in Headers */ = {isa = PBXBuildFile; fileRef = DCCE55660BDC7030000E2798 /* XMPPStream.h */; };
-		276248150ED3D6950028C301 /* XMPPStream.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55670BDC7030000E2798 /* XMPPStream.m */; };
+		276248140ED3D6930028C301 /* TCPXMPPStream.h in Headers */ = {isa = PBXBuildFile; fileRef = DCCE55660BDC7030000E2798 /* TCPXMPPStream.h */; };
+		276248150ED3D6950028C301 /* TCPXMPPStream.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55670BDC7030000E2798 /* TCPXMPPStream.m */; };
 		276248160ED3D6960028C301 /* XMPPTransports.h in Headers */ = {isa = PBXBuildFile; fileRef = DC63E91F0E65D5140076E6D2 /* XMPPTransports.h */; };
 		276248170ED3D6980028C301 /* XMPPTransports.m in Sources */ = {isa = PBXBuildFile; fileRef = DC63E9200E65D5140076E6D2 /* XMPPTransports.m */; };
 		276248180ED3D69A0028C301 /* XMPPUser.h in Headers */ = {isa = PBXBuildFile; fileRef = DC5247D50BE318AE002F838C /* XMPPUser.h */; };
@@ -79,7 +81,7 @@
 		DCB9BBF20DDCEE39002DA335 /* NSXMLElementAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = DCB9BBF10DDCEE39002DA335 /* NSXMLElementAdditions.m */; };
 		DCCE55390BDC6290000E2798 /* AsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55380BDC6290000E2798 /* AsyncSocket.m */; };
 		DCCE55610BDC6FAC000E2798 /* RosterController.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55600BDC6FAC000E2798 /* RosterController.m */; };
-		DCCE55680BDC7030000E2798 /* XMPPStream.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55670BDC7030000E2798 /* XMPPStream.m */; };
+		DCCE55680BDC7030000E2798 /* TCPXMPPStream.m in Sources */ = {isa = PBXBuildFile; fileRef = DCCE55670BDC7030000E2798 /* TCPXMPPStream.m */; };
 		DCEFA0760E8D4867006E145E /* libidn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DCEFA0750E8D4867006E145E /* libidn.a */; };
 		DCF825950D748DC000BFABDE /* RequestController.m in Sources */ = {isa = PBXBuildFile; fileRef = DCF825940D748DC000BFABDE /* RequestController.m */; };
 		DCF825F50D749A5100BFABDE /* ChatController.m in Sources */ = {isa = PBXBuildFile; fileRef = DCF825F40D749A5100BFABDE /* ChatController.m */; };
@@ -112,6 +114,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		075FDCFB101CCDB9001DE5FD /* AbstractXMPPStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AbstractXMPPStream.h; sourceTree = "<group>"; };
+		075FDD35101CCFEA001DE5FD /* AbstractXMPPStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AbstractXMPPStream.m; sourceTree = "<group>"; };
+		075FDE0E101D6EDC001DE5FD /* XMPPStreamDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMPPStreamDelegate.h; sourceTree = "<group>"; };
+		075FDE4D101D70F1001DE5FD /* XMPPDigestAuthentication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMPPDigestAuthentication.h; sourceTree = "<group>"; };
+		075FDE4E101D70F1001DE5FD /* XMPPDigestAuthentication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XMPPDigestAuthentication.m; sourceTree = "<group>"; };
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
@@ -168,8 +175,8 @@
 		DCCE55380BDC6290000E2798 /* AsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = AsyncSocket.m; sourceTree = "<group>"; };
 		DCCE555F0BDC6FAC000E2798 /* RosterController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = RosterController.h; sourceTree = "<group>"; };
 		DCCE55600BDC6FAC000E2798 /* RosterController.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = RosterController.m; sourceTree = "<group>"; };
-		DCCE55660BDC7030000E2798 /* XMPPStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMPPStream.h; sourceTree = "<group>"; };
-		DCCE55670BDC7030000E2798 /* XMPPStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XMPPStream.m; sourceTree = "<group>"; };
+		DCCE55660BDC7030000E2798 /* TCPXMPPStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCPXMPPStream.h; sourceTree = "<group>"; };
+		DCCE55670BDC7030000E2798 /* TCPXMPPStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TCPXMPPStream.m; sourceTree = "<group>"; };
 		DCD886890E8CE26A00CD15A2 /* DDXML.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DDXML.h; path = KissXML/DDXML.h; sourceTree = "<group>"; };
 		DCD8868A0E8CE26A00CD15A2 /* DDXMLDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DDXMLDocument.h; path = KissXML/DDXMLDocument.h; sourceTree = "<group>"; };
 		DCD8868B0E8CE26A00CD15A2 /* DDXMLDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DDXMLDocument.m; path = KissXML/DDXMLDocument.m; sourceTree = "<group>"; };
@@ -228,11 +235,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		075FDCE0101CCD23001DE5FD /* BOSH */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = BOSH;
+			sourceTree = "<group>";
+		};
 		080E96DDFE201D6D7F000001 /* TCP */ = {
 			isa = PBXGroup;
 			children = (
 				DCCE55370BDC6290000E2798 /* AsyncSocket.h */,
 				DCCE55380BDC6290000E2798 /* AsyncSocket.m */,
+				DCCE55660BDC7030000E2798 /* TCPXMPPStream.h */,
+				DCCE55670BDC7030000E2798 /* TCPXMPPStream.m */,
 			);
 			name = TCP;
 			sourceTree = "<group>";
@@ -275,6 +291,7 @@
 			children = (
 				DCD886850E8CE1F100CD15A2 /* KissXML */,
 				DC63E9F70E65FD310076E6D2 /* Utilities */,
+				075FDCE0101CCD23001DE5FD /* BOSH */,
 				080E96DDFE201D6D7F000001 /* TCP */,
 				DCCE55760BDC8EC8000E2798 /* XMPP */,
 				DCCE55630BDC6FBC000E2798 /* GUI - MainMenu */,
@@ -385,11 +402,11 @@
 		DCCE55760BDC8EC8000E2798 /* XMPP */ = {
 			isa = PBXGroup;
 			children = (
+				075FDCFB101CCDB9001DE5FD /* AbstractXMPPStream.h */,
+				075FDD35101CCFEA001DE5FD /* AbstractXMPPStream.m */,
 				DCB9BBF30DDCEE6B002DA335 /* Categories */,
 				DCB9BAF80DDC962C002DA335 /* Utilities */,
 				DCB9BBEF0DDCEDA6002DA335 /* XMPP.h */,
-				DCCE55660BDC7030000E2798 /* XMPPStream.h */,
-				DCCE55670BDC7030000E2798 /* XMPPStream.m */,
 				DCB9BA0A0DDB71E7002DA335 /* XMPPClient.h */,
 				DCB9BA0B0DDB71E7002DA335 /* XMPPClient.m */,
 				DCB9BA100DDB73B1002DA335 /* XMPPJID.h */,
@@ -406,6 +423,9 @@
 				DCB9BA1A0DDB73E6002DA335 /* XMPPMessage.m */,
 				DCB9BA160DDB73DA002DA335 /* XMPPPresence.h */,
 				DCB9BA170DDB73DA002DA335 /* XMPPPresence.m */,
+				075FDE0E101D6EDC001DE5FD /* XMPPStreamDelegate.h */,
+				075FDE4D101D70F1001DE5FD /* XMPPDigestAuthentication.h */,
+				075FDE4E101D70F1001DE5FD /* XMPPDigestAuthentication.m */,
 				DC63E91E0E65D4EF0076E6D2 /* Extensions */,
 			);
 			name = XMPP;
@@ -476,7 +496,7 @@
 				2762480E0ED3D68A0028C301 /* XMPPMessage.h in Headers */,
 				276248100ED3D68E0028C301 /* XMPPPresence.h in Headers */,
 				276248120ED3D68F0028C301 /* XMPPResource.h in Headers */,
-				276248140ED3D6930028C301 /* XMPPStream.h in Headers */,
+				276248140ED3D6930028C301 /* TCPXMPPStream.h in Headers */,
 				276248160ED3D6960028C301 /* XMPPTransports.h in Headers */,
 				276248180ED3D69A0028C301 /* XMPPUser.h in Headers */,
 				DC839B430F741484000F2C7F /* XMPPPing.h in Headers */,
@@ -610,7 +630,7 @@
 				2762480F0ED3D68B0028C301 /* XMPPMessage.m in Sources */,
 				276248110ED3D68F0028C301 /* XMPPPresence.m in Sources */,
 				276248130ED3D6900028C301 /* XMPPResource.m in Sources */,
-				276248150ED3D6950028C301 /* XMPPStream.m in Sources */,
+				276248150ED3D6950028C301 /* TCPXMPPStream.m in Sources */,
 				276248170ED3D6980028C301 /* XMPPTransports.m in Sources */,
 				276248190ED3D69A0028C301 /* XMPPUser.m in Sources */,
 				DC839B440F741484000F2C7F /* XMPPPing.m in Sources */,
@@ -636,7 +656,7 @@
 				8D11072D0486CEB800E47090 /* main.m in Sources */,
 				DCCE55390BDC6290000E2798 /* AsyncSocket.m in Sources */,
 				DCCE55610BDC6FAC000E2798 /* RosterController.m in Sources */,
-				DCCE55680BDC7030000E2798 /* XMPPStream.m in Sources */,
+				DCCE55680BDC7030000E2798 /* TCPXMPPStream.m in Sources */,
 				DC5247D80BE318AE002F838C /* XMPPUser.m in Sources */,
 				DCF825950D748DC000BFABDE /* RequestController.m in Sources */,
 				DCF825F50D749A5100BFABDE /* ChatController.m in Sources */,
@@ -656,6 +676,8 @@
 				DC0E7D320EADD7DE00B81D90 /* SSCrypto.m in Sources */,
 				DCAF51130EC8C3CD00445B85 /* MulticastDelegate.m in Sources */,
 				DC839B450F741484000F2C7F /* XMPPPing.m in Sources */,
+				075FDD36101CCFEA001DE5FD /* AbstractXMPPStream.m in Sources */,
+				075FDE4F101D70F1001DE5FD /* XMPPDigestAuthentication.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

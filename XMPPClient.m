@@ -1,5 +1,6 @@
 #import "XMPPClient.h"
-#import "XMPPStream.h"
+#import "AbstractXMPPStream.h"
+#import "TCPXMPPStream.h"
 #import "XMPPJID.h"
 #import "XMPPUser.h"
 #import "XMPPResource.h"
@@ -56,7 +57,8 @@ enum XMPPClientFlags
 		[self setAutoRoster:YES];
 		[self setAutoReconnect:YES];
 		
-		xmppStream = [[XMPPStream alloc] initWithDelegate:self];
+		// FIXME: The stream needs to be an arg!
+		xmppStream = [[TCPXMPPStream alloc] initWithDelegate:self];
 		
 		roster = [[NSMutableDictionary alloc] initWithCapacity:10];
 		
@@ -742,7 +744,7 @@ enum XMPPClientFlags
 #pragma mark XMPPStream Delegate Methods:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-- (void)xmppStreamDidOpen:(XMPPStream *)sender
+- (void)xmppStreamDidOpen:(AbstractXMPPStream *)sender
 {
 	[self onDidConnect];
 	
@@ -752,17 +754,17 @@ enum XMPPClientFlags
 	}
 }
 
-- (void)xmppStreamDidRegister:(XMPPStream *)sender
+- (void)xmppStreamDidRegister:(AbstractXMPPStream *)sender
 {
 	[self onDidRegister];
 }
 
-- (void)xmppStream:(XMPPStream *)sender didNotRegister:(NSXMLElement *)error
+- (void)xmppStream:(AbstractXMPPStream *)sender didNotRegister:(NSXMLElement *)error
 {
 	[self onDidNotRegister:error];
 }
 
-- (void)xmppStreamDidAuthenticate:(XMPPStream *)sender
+- (void)xmppStreamDidAuthenticate:(AbstractXMPPStream *)sender
 {
 	// We're now connected and properly authenticated
 	// Should we get accidentally disconnected we should automatically reconnect (if kAutoReconnect is set)
@@ -797,12 +799,12 @@ enum XMPPClientFlags
 	[self onDidAuthenticate];
 }
 
-- (void)xmppStream:(XMPPStream *)sender didNotAuthenticate:(NSXMLElement *)error
+- (void)xmppStream:(AbstractXMPPStream *)sender didNotAuthenticate:(NSXMLElement *)error
 {
 	[self onDidNotAuthenticate:error];
 }
 
-- (void)xmppStream:(XMPPStream *)sender didReceiveIQ:(XMPPIQ *)iq
+- (void)xmppStream:(AbstractXMPPStream *)sender didReceiveIQ:(XMPPIQ *)iq
 {
 	if([iq isRosterQuery])
 	{
@@ -869,12 +871,12 @@ enum XMPPClientFlags
 	}
 }
 
-- (void)xmppStream:(XMPPStream *)sender didReceiveMessage:(XMPPMessage *)message
+- (void)xmppStream:(AbstractXMPPStream *)sender didReceiveMessage:(XMPPMessage *)message
 {
 	[self onDidReceiveMessage:message];
 }
 
-- (void)xmppStream:(XMPPStream *)sender didReceivePresence:(XMPPPresence *)presence
+- (void)xmppStream:(AbstractXMPPStream *)sender didReceivePresence:(XMPPPresence *)presence
 {
 	if(![self hasRoster])
 	{
@@ -932,7 +934,7 @@ enum XMPPClientFlags
  * Note that standard errors (<iq type='error'/> for example) are delivered normally,
  * via the other didReceive...: methods.
 **/
-- (void)xmppStream:(XMPPStream *)xs didReceiveError:(id)error
+- (void)xmppStream:(AbstractXMPPStream *)xs didReceiveError:(id)error
 {
 	if([error isKindOfClass:[NSError class]])
 	{
@@ -948,7 +950,7 @@ enum XMPPClientFlags
 	}
 }
 
-- (void)xmppStreamDidClose:(XMPPStream *)sender
+- (void)xmppStreamDidClose:(AbstractXMPPStream *)sender
 {
 	[roster removeAllObjects];
 	[self setHasRoster:NO];
