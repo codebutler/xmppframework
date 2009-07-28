@@ -38,7 +38,16 @@
 	[jidField setObjectValue:[dflts objectForKey:@"Account.JID"]];
 	[sslButton setObjectValue:[dflts objectForKey:@"Account.UseSSL"]];
 	[selfSignedButton setObjectValue:[dflts objectForKey:@"Account.AllowSelfSignedCert"]];
-
+	[bindUrlField setObjectValue:[dflts objectForKey:@"Account.BindURL"]];
+	
+	if ([[dflts stringForKey:@"Account.ConnectionType"] isEqualTo:@"BOSH"]) {
+		[connectionTypeButton selectItemAtIndex:1];
+		[connectionTabs selectTabViewItemAtIndex:1];
+	} else {
+		[connectionTypeButton selectItemAtIndex:0];
+		[connectionTabs selectTabViewItemAtIndex:0];
+	}
+	
 	[NSApp beginSheet:signInSheet
 	   modalForWindow:window
 		modalDelegate:self
@@ -49,6 +58,15 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Account Management:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+- (IBAction)changeConnectionType:(id)sender
+{	
+	if([[sender titleOfSelectedItem] isEqualToString:@"TCP"]) {
+		[connectionTabs selectTabViewItemAtIndex:0];
+	} else {
+		[connectionTabs selectTabViewItemAtIndex:1];
+	}
+}
 
 - (void)updateAccountInfo
 {
@@ -65,8 +83,21 @@
 	BOOL usesSSL = ([sslButton state] == NSOnState);
 	BOOL allowsSelfSignedCertificates = ([selfSignedButton state] == NSOnState);
 	
-	[xmppClient setUsesOldStyleSSL:usesSSL];
-	[xmppClient setAllowsSelfSignedCertificates:allowsSelfSignedCertificates];
+	AbstractXMPPStream *stream;
+	
+	if ([[connectionTypeButton titleOfSelectedItem] isEqualTo:@"BOSH"]) {
+		BOSHXMPPStream *boshStream = [[BOSHXMPPStream alloc] init];
+		[boshStream setBindUrl:[bindUrlField stringValue]];
+		stream = boshStream;
+	} else {		
+		stream = [[TCPXMPPStream alloc] init];
+		[stream setAllowsSelfSignedCertificates:allowsSelfSignedCertificates];
+		
+		// FIXME: Set this on the stream
+		[xmppClient setUsesOldStyleSSL:usesSSL];
+	}
+	
+	[xmppClient setXmppStream:stream];
 	
 	NSString *resource = [resourceField stringValue];
 	if([resource length] == 0)
@@ -93,6 +124,10 @@
 			forKey:@"Account.UseSSL"];
 	[dflts setBool:allowsSelfSignedCertificates 
 			forKey:@"Account.AllowSelfSignedCert"];
+	[dflts setObject:[bindUrlField stringValue] 
+			  forKey:@"Account.BindURL"];
+	[dflts setObject:[connectionTypeButton titleOfSelectedItem]
+			  forKey:@"Account.ConnectionType"];
 	[dflts synchronize];
 }
 

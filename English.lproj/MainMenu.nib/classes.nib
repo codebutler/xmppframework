@@ -17,6 +17,8 @@
 			<dict>
 				<key>addBuddy</key>
 				<string>id</string>
+				<key>changeConnectionType</key>
+				<string>id</string>
 				<key>changePresence</key>
 				<string>id</string>
 				<key>chat</key>
@@ -34,7 +36,13 @@
 			<string>ObjC</string>
 			<key>OUTLETS</key>
 			<dict>
+				<key>bindUrlField</key>
+				<string>id</string>
 				<key>buddyField</key>
+				<string>id</string>
+				<key>connectionTabs</key>
+				<string>id</string>
+				<key>connectionTypeButton</key>
 				<string>id</string>
 				<key>jidField</key>
 				<string>id</string>
@@ -72,19 +80,6 @@
 		</dict>
 		<dict>
 			<key>CLASS</key>
-			<string>XMPPStream</string>
-			<key>LANGUAGE</key>
-			<string>ObjC</string>
-			<key>OUTLETS</key>
-			<dict>
-				<key>delegate</key>
-				<string>id</string>
-			</dict>
-			<key>SUPERCLASS</key>
-			<string>NSObject</string>
-		</dict>
-		<dict>
-			<key>CLASS</key>
 			<string>FirstResponder</string>
 			<key>LANGUAGE</key>
 			<string>ObjC</string>
@@ -109,13 +104,13 @@
 				<key>xmppClientDidUpdateRoster</key>
 				<string>XMPPClient</string>
 				<key>xmppStreamDidAuthenticate</key>
-				<string>XMPPStream</string>
+				<string>AbstractXMPPStream</string>
 				<key>xmppStreamDidClose</key>
-				<string>XMPPStream</string>
+				<string>AbstractXMPPStream</string>
 				<key>xmppStreamDidOpen</key>
-				<string>XMPPStream</string>
+				<string>AbstractXMPPStream</string>
 				<key>xmppStreamDidRegister</key>
-				<string>XMPPStream</string>
+				<string>AbstractXMPPStream</string>
 			</dict>
 			<key>CLASS</key>
 			<string>NSObject</string>
@@ -145,6 +140,19 @@
 				<key>xmppClient</key>
 				<string>id</string>
 				<key>xofyField</key>
+				<string>id</string>
+			</dict>
+			<key>SUPERCLASS</key>
+			<string>NSObject</string>
+		</dict>
+		<dict>
+			<key>CLASS</key>
+			<string>AbstractXMPPStream</string>
+			<key>LANGUAGE</key>
+			<string>ObjC</string>
+			<key>OUTLETS</key>
+			<dict>
+				<key>delegate</key>
 				<string>id</string>
 			</dict>
 			<key>SUPERCLASS</key>

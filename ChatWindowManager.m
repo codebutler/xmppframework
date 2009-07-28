@@ -53,7 +53,7 @@
 	else
 	{
 		// Create Manual Sync Window
-		XMPPJID *jid = [[user primaryResource] jid];
+		XMPPJID *jid = ([user primaryResource]) ? [[user primaryResource] jid] : [user jid];
 		
 		ChatController *temp = [[ChatController alloc] initWithXMPPClient:client jid:jid];
 		[temp showWindow:self];

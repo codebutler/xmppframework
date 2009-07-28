@@ -16,7 +16,6 @@
 	NSMutableData *buffer;
 	
 	NSData *terminator;
-	
 }
 
 - (void)setup;

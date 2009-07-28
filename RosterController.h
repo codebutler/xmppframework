@@ -10,6 +10,9 @@
 	
 	NSArray *roster;
 	
+	IBOutlet id connectionTypeButton;
+	IBOutlet id connectionTabs;
+	IBOutlet id bindUrlField;
 	IBOutlet id buddyField;
     IBOutlet id jidField;
     IBOutlet id messageField;
@@ -27,6 +30,7 @@
 	IBOutlet id xmppClient;
 }
 
+- (IBAction)changeConnectionType:(id)sender;
 - (IBAction)addBuddy:(id)sender;
 - (IBAction)changePresence:(id)sender;
 - (IBAction)chat:(id)sender;

@@ -74,7 +74,8 @@
 	return delegate;
 }
 - (void)setDelegate:(id)newDelegate {
-	delegate = newDelegate;
+	[delegate autorelease];
+	delegate = [newDelegate retain];
 }
 
 /**
@@ -181,48 +182,9 @@
 #pragma mark Stream Negotiation:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * This method handles sending the opening <stream:stream ...> element which is needed in several situations.
- **/
 - (void)sendOpeningNegotiation
 {
-	if(state == STATE_CONNECTING)
-	{
-		// TCP connection was just opened - We need to include the opening XML stanza
-		NSString *s1 = @"<?xml version='1.0'?>";
-		
-		if(DEBUG_SEND) {
-			NSLog(@"SEND: %@", s1);
-		}
-		[self writeData:[s1 dataUsingEncoding:NSUTF8StringEncoding]
-				   withTimeout:TIMEOUT_WRITE
-						   tag:TAG_WRITE_START];
-	}
-	
-	NSString *xmlns = @"jabber:client";
-	NSString *xmlns_stream = @"http://etherx.jabber.org/streams";
-	
-	NSString *temp, *s2;
-	if([xmppHostName length] > 0)
-	{
-		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0' to='%@'>";
-		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream, xmppHostName];
-	}
-	else
-	{
-		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0'>";
-		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream];
-	}
-	
-	if(DEBUG_SEND) {
-		NSLog(@"SEND: %@", s2);
-	}
-	[self writeData:[s2 dataUsingEncoding:NSUTF8StringEncoding]
-			   withTimeout:TIMEOUT_WRITE
-					   tag:TAG_WRITE_START];
-	
-	// Update status
-	state = STATE_OPENING;
+	[self doesNotRecognizeSelector:_cmd];	
 }
 
 /**
@@ -977,5 +939,88 @@
 {
 	[self doesNotRecognizeSelector:_cmd];	
 }
+
+- (void)handleElement:(NSXMLElement *)element
+{	
+	if(state == STATE_NEGOTIATING)
+	{
+		// We've just read in the stream features
+		// We considered part of the root element, so we'll add it (replacing any previously sent features)
+		[element detach];
+		[rootElement setChildren:[NSArray arrayWithObject:element]];
+		
+		// Call a method to handle any requirements set forth in the features
+		[self handleStreamFeatures];
+	}
+	else if(state == STATE_REGISTERING)
+	{
+		// The iq response from our registration request
+		[self handleRegistration:element];
+	}
+	else if(state == STATE_AUTH_1)
+	{
+		// The challenge response from our auth message
+		[self handleAuth1:element];
+	}
+	else if(state == STATE_AUTH_2)
+	{
+		// The response from our challenge response
+		[self handleAuth2:element];
+	}
+	else if(state == STATE_BINDING)
+	{
+		// The response from our binding request
+		[self handleBinding:element];
+	}
+	else if(state == STATE_START_SESSION)
+	{
+		// The response from our start session request
+		[self handleStartSessionResponse:element];
+	}
+	else if([[element name] isEqualToString:@"iq"])
+	{
+		if([delegate respondsToSelector:@selector(xmppStream:didReceiveIQ:)])
+		{
+			[delegate xmppStream:self didReceiveIQ:[XMPPIQ iqFromElement:element]];
+		}
+		else if(DEBUG_DELEGATE)
+		{
+			NSLog(@"xmppStream:%p didReceiveIQ:%@", self, [element XMLString]);
+		}
+	}
+	else if([[element name] isEqualToString:@"message"])
+	{
+		if([delegate respondsToSelector:@selector(xmppStream:didReceiveMessage:)])
+		{
+			[delegate xmppStream:self didReceiveMessage:[XMPPMessage messageFromElement:element]];
+		}
+		else if(DEBUG_DELEGATE)
+		{
+			NSLog(@"xmppStream:%p didReceiveMessage:%@", self, [element XMLString]);
+		}
+	}
+	else if([[element name] isEqualToString:@"presence"])
+	{
+		if([delegate respondsToSelector:@selector(xmppStream:didReceivePresence:)])
+		{
+			[delegate xmppStream:self didReceivePresence:[XMPPPresence presenceFromElement:element]];
+		}
+		else if(DEBUG_DELEGATE)
+		{
+			NSLog(@"xmppStream:%p didReceivePresence:%@", self, [element XMLString]);
+		}
+	}
+	else
+	{
+		if([delegate respondsToSelector:@selector(xmppStream:didReceiveError:)])
+		{
+			[delegate xmppStream:self didReceiveError:element];
+		}
+		else if(DEBUG_DELEGATE)
+		{
+			NSLog(@"xmppStream:%p didReceiveError:%@", self, [element XMLString]);
+		}
+	}
+}	
 
 @end

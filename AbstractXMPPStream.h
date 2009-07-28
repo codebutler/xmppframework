@@ -101,5 +101,6 @@
 - (void)handleAuth2:(NSXMLElement *)response;
 - (void)handleBinding:(NSXMLElement *)response;
 - (void)handleStartSessionResponse:(NSXMLElement *)response;
+- (void)handleElement:(NSXMLElement *)element;
 
 @end

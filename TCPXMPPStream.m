@@ -109,6 +109,51 @@
 #pragma mark Stream Negotiation:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+/**
+ * This method handles sending the opening <stream:stream ...> element which is needed in several situations.
+ **/
+- (void)sendOpeningNegotiation
+{
+	if(state == STATE_CONNECTING)
+	{
+		// TCP connection was just opened - We need to include the opening XML stanza
+		NSString *s1 = @"<?xml version='1.0'?>";
+		
+		if(DEBUG_SEND) {
+			NSLog(@"SEND: %@", s1);
+		}
+		[self writeData:[s1 dataUsingEncoding:NSUTF8StringEncoding]
+			withTimeout:TIMEOUT_WRITE
+					tag:TAG_WRITE_START];
+	}
+	
+	NSString *xmlns = @"jabber:client";
+	NSString *xmlns_stream = @"http://etherx.jabber.org/streams";
+	
+	NSString *temp, *s2;
+	if([xmppHostName length] > 0)
+	{
+		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0' to='%@'>";
+		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream, xmppHostName];
+	}
+	else
+	{
+		temp = @"<stream:stream xmlns='%@' xmlns:stream='%@' version='1.0'>";
+		s2 = [NSString stringWithFormat:temp, xmlns, xmlns_stream];
+	}
+	
+	if(DEBUG_SEND) {
+		NSLog(@"SEND: %@", s2);
+	}
+	[self writeData:[s2 dataUsingEncoding:NSUTF8StringEncoding]
+		withTimeout:TIMEOUT_WRITE
+				tag:TAG_WRITE_START];
+	
+	// Update status
+	state = STATE_OPENING;
+}
+
 - (void)handleStartTLSResponse:(NSXMLElement *)response
 {
 	// We're expecting a proceed response
@@ -200,7 +245,7 @@
 - (void)onSocket:(AsyncSocket *)sock didConnectToHost:(NSString *)host port:(UInt16)port
 {
 	// We're now connected with a TCP stream, so it's time to initialize the XML stream
-	[super sendOpeningNegotiation];
+	[self sendOpeningNegotiation];
 	
 	// Now start reading in the server's XML stream
 	[asyncSocket readDataToData:terminator withTimeout:TIMEOUT_READ_START tag:TAG_READ_START];
@@ -324,89 +369,12 @@
 	
 	NSXMLElement *element = [xmlDoc rootElement];
 	
-	if(state == STATE_NEGOTIATING)
-	{
-		// We've just read in the stream features
-		// We considered part of the root element, so we'll add it (replacing any previously sent features)
-		[element detach];
-		[rootElement setChildren:[NSArray arrayWithObject:element]];
-		
-		// Call a method to handle any requirements set forth in the features
-		[super handleStreamFeatures];
-	}
-	else if(state == STATE_STARTTLS)
+	if(state == STATE_STARTTLS)
 	{
 		// The response from our starttls message
 		[self handleStartTLSResponse:element];
-	}
-	else if(state == STATE_REGISTERING)
-	{
-		// The iq response from our registration request
-		[super handleRegistration:element];
-	}
-	else if(state == STATE_AUTH_1)
-	{
-		// The challenge response from our auth message
-		[super handleAuth1:element];
-	}
-	else if(state == STATE_AUTH_2)
-	{
-		// The response from our challenge response
-		[self handleAuth2:element];
-	}
-	else if(state == STATE_BINDING)
-	{
-		// The response from our binding request
-		[super handleBinding:element];
-	}
-	else if(state == STATE_START_SESSION)
-	{
-		// The response from our start session request
-		[super handleStartSessionResponse:element];
-	}
-	else if([[element name] isEqualToString:@"iq"])
-	{
-		if([delegate respondsToSelector:@selector(xmppStream:didReceiveIQ:)])
-		{
-			[delegate xmppStream:self didReceiveIQ:[XMPPIQ iqFromElement:element]];
-		}
-		else if(DEBUG_DELEGATE)
-		{
-			NSLog(@"xmppStream:%p didReceiveIQ:%@", self, [element XMLString]);
-		}
-	}
-	else if([[element name] isEqualToString:@"message"])
-	{
-		if([delegate respondsToSelector:@selector(xmppStream:didReceiveMessage:)])
-		{
-			[delegate xmppStream:self didReceiveMessage:[XMPPMessage messageFromElement:element]];
-		}
-		else if(DEBUG_DELEGATE)
-		{
-			NSLog(@"xmppStream:%p didReceiveMessage:%@", self, [element XMLString]);
-		}
-	}
-	else if([[element name] isEqualToString:@"presence"])
-	{
-		if([delegate respondsToSelector:@selector(xmppStream:didReceivePresence:)])
-		{
-			[delegate xmppStream:self didReceivePresence:[XMPPPresence presenceFromElement:element]];
-		}
-		else if(DEBUG_DELEGATE)
-		{
-			NSLog(@"xmppStream:%p didReceivePresence:%@", self, [element XMLString]);
-		}
-	}
-	else
-	{
-		if([delegate respondsToSelector:@selector(xmppStream:didReceiveError:)])
-		{
-			[delegate xmppStream:self didReceiveError:element];
-		}
-		else if(DEBUG_DELEGATE)
-		{
-			NSLog(@"xmppStream:%p didReceiveError:%@", self, [element XMLString]);
-		}
+	} else {
+		[super handleElement:element];
 	}
 	
 	// Clear the buffer
@@ -488,6 +456,15 @@
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark General Methods:
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+- (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag
+{
+	[asyncSocket writeData:data withTimeout:timeout tag:tag];
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Helper Methods:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -500,15 +477,4 @@
 						   tag:TAG_WRITE_STREAM];
 	}
 }
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark General Methods:
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-- (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag
-{
-	[asyncSocket writeData:data withTimeout:timeout tag:tag];
-}
-
 @end

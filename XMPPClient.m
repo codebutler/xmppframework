@@ -57,10 +57,7 @@ enum XMPPClientFlags
 		[self setAutoPresence:YES];
 		[self setAutoRoster:YES];
 		[self setAutoReconnect:YES];
-		
-		// FIXME: The stream needs to be an arg!
-		xmppStream = [[TCPXMPPStream alloc] initWithDelegate:self];
-		
+
 		roster = [[NSMutableDictionary alloc] initWithCapacity:10];
 		
 		earlyPresenceElements = [[NSMutableArray alloc] initWithCapacity:2];
@@ -97,6 +94,13 @@ enum XMPPClientFlags
 	[scNotificationManager release];
 	
 	[super dealloc];
+}
+
+- (void)setXmppStream:(AbstractXMPPStream *)stream
+{
+	[xmppStream autorelease];
+	[stream setDelegate:self];
+	xmppStream = [stream retain];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,15 +184,6 @@ enum XMPPClientFlags
 - (void)setPriority:(int)newPriority
 {
 	priority = newPriority;
-}
-
-- (BOOL)allowsSelfSignedCertificates
-{
-	return [xmppStream allowsSelfSignedCertificates];
-}
-- (void)setAllowsSelfSignedCertificates:(BOOL)flag
-{
-	[xmppStream setAllowsSelfSignedCertificates:flag];
 }
 
 - (BOOL)isDisconnected

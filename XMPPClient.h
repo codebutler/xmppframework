@@ -37,6 +37,8 @@
 
 - (id)init;
 
+- (void)setXmppStream:(AbstractXMPPStream*)stream;
+
 - (void)addDelegate:(id)delegate;
 - (void)removeDelegate:(id)delegate;
 
@@ -57,9 +59,6 @@
 
 - (int)priority;
 - (void)setPriority:(int)priority;
-
-- (BOOL)allowsSelfSignedCertificates;
-- (void)setAllowsSelfSignedCertificates:(BOOL)flag;
 
 - (BOOL)isDisconnected;
 - (BOOL)isConnected;
