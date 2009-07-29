@@ -25,6 +25,8 @@
 				<string>id</string>
 				<key>createAccount</key>
 				<string>id</string>
+				<key>handleQuit</key>
+				<string>id</string>
 				<key>removeBuddy</key>
 				<string>id</string>
 				<key>signIn</key>
