@@ -22,7 +22,10 @@
 		[request setHTTPBody:theData];
 
 		NSData *data = [request HTTPBody];
-		NSLog(@"Will send: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+		
+		NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+		NSLog(@"Will send: %@", dataString);
+		[dataString release];
 
 		connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
 	}
@@ -40,7 +43,9 @@
 
 - (void)start
 {
-	NSLog(@"Going to send: %@", [[NSString alloc] initWithData:[request HTTPBody] encoding:NSUTF8StringEncoding]);
+	NSString *dataString = [[NSString alloc] initWithData:[request HTTPBody] encoding:NSUTF8StringEncoding];
+	NSLog(@"Going to send: %@", dataString);
+	[dataString release];
 	
 	[connection start];
 }
@@ -87,11 +92,13 @@
 	
 	if ([buffer length] == [response expectedContentLength]) {	
 		NSString *body = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
-		
+
 		NSLog(@"Did receive data! %@", body);
 		
 		NSError *error = nil;	
 		NSXMLElement *element = [[NSXMLElement alloc] initWithXMLString:body error:&error];
+		
+		[body release];
 		
 		// FIXME: throw an error
 		if (![[element name] isEqualToString:@"body"]) {
@@ -102,6 +109,8 @@
 		if ([stream respondsToSelector:@selector(request:didReceiveElement:)]) {
 			[stream request:self didReceiveElement:element];
 		}
+		
+		[element release];
 	} else {
 		NSLog(@"Still waiting for %d bytes", [response expectedContentLength] - [buffer length]);
 	}

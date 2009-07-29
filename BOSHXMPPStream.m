@@ -19,6 +19,15 @@
 	requests = [[NSMutableArray alloc] init];
 }
 
+- (void)dealloc {
+	[bindUrl release];
+	[sid release];
+	[authId release];
+	[requests release];
+	[sendQueue release];
+	[super dealloc];
+}
+
 - (void)connectToHost:(NSString *)hostName onPort:(UInt16)portNumber withVirtualHost:(NSString *)vHostName {
 
 	if (state != STATE_DISCONNECTED)
@@ -79,8 +88,8 @@
 						
 			state = STATE_NEGOTIATING;
 			
-			sid = [[element attributeForName:@"sid"] stringValue];
-			authId = [[element attributeForName:@"authid"] stringValue];
+			sid = [[[element attributeForName:@"sid"] stringValue] copy];
+			authId = [[[element attributeForName:@"authid"] stringValue] copy];
 			
 			[rootElement addAttribute:[NSXMLNode attributeWithName:@"id" stringValue:authId]];
 			
@@ -112,13 +121,9 @@
 		NSData *data = [[sendQueue lastObject] retain];
 		[sendQueue removeLastObject];
 		
-		if (![data isKindOfClass:[NSData class]]) {
-			NSLog(@"WTF !?!?!?!");
-			return;
-		}
-		
 		BOSHXMPPRequest *request = [[BOSHXMPPRequest alloc] initWithStream:self bodyData:data];
 		[requests addObject:request];
+		[request release];
 		[request start];
 	}
 }
@@ -142,6 +147,9 @@
 	
 	NSData *fullData = [fullText dataUsingEncoding:NSUTF8StringEncoding];	
 	[self queueData:fullData];
+	
+	[body release];
+	[fullText release];
 }
 
 
@@ -150,9 +158,12 @@
 		// Send request		
 		BOSHXMPPRequest *request = [[BOSHXMPPRequest alloc] initWithStream:self bodyData:data];
 		[requests addObject:request];
+		[request release];
 		[request start];
 	} else {
 		[sendQueue insertObject:data atIndex:0];
+		// FIXME: I think the ref count on data is different for different code paths.
+		// [data release];
 	}
 }
 
