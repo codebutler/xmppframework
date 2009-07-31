@@ -9,8 +9,10 @@
 #import "XMPPPresence.h"
 #import "NSXMLElementAdditions.h"
 #import "MulticastDelegate.h"
-#import "SCNotificationManager.h"
 
+#ifndef TARGET_OS_IPHONE
+#import "SCNotificationManager.h"
+#endif
 
 enum XMPPClientFlags
 {
@@ -61,7 +63,8 @@ enum XMPPClientFlags
 		roster = [[NSMutableDictionary alloc] initWithCapacity:10];
 		
 		earlyPresenceElements = [[NSMutableArray alloc] initWithCapacity:2];
-		
+
+#ifndef TARGET_OS_IPHONE
 		scNotificationManager = [[SCNotificationManager alloc] init];
 		
 		// Register for network notifications from system configuration
@@ -69,6 +72,7 @@ enum XMPPClientFlags
 												 selector:@selector(networkStatusDidChange:) 
 													 name:@"State:/Network/Global/IPv4" 
 												   object:scNotificationManager];
+#endif
 	}
 	return self;
 }
@@ -91,7 +95,9 @@ enum XMPPClientFlags
 	
 	[earlyPresenceElements release];
 	
+#ifndef TARGET_OS_IPHONE
 	[scNotificationManager release];
+#endif
 	
 	[super dealloc];
 }
@@ -972,13 +978,18 @@ enum XMPPClientFlags
 	
 	if([xmppStream isDisconnected] && [self autoReconnect] && [self shouldReconnect])
 	{
+#ifndef TARGET_OS_IPHONE
 		SCNetworkConnectionFlags reachabilityStatus;
 		BOOL success = SCNetworkCheckReachabilityByName("www.deusty.com", &reachabilityStatus);
 		
-		if(success && (reachabilityStatus & kSCNetworkFlagsReachable))
+		if(success && (reachabilityStatus & kSCNetworkFlagsReachable)) 
 		{
 			[self connect];
 		}
+#endif
+#ifdef TARGET_OS_IPHONE
+		[self connect];
+#endif
 	}
 }
 

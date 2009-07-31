@@ -1,3 +1,4 @@
+#import "DDXML.h"
 #import "NSXMLElementAdditions.h"
 #import "NSDataAdditions.h"
 

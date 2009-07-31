@@ -8,6 +8,7 @@
 #import "XMPPMessage.h"
 #import "XMPPPresence.h"
 #import "XMPPDigestAuthentication.h"
+#import "DDXML.h"
 
 #if TARGET_OS_IPHONE
 // Note: You may need to add the CFNetwork Framework to your project

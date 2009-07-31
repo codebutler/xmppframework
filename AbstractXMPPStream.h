@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import "DDXML.h"
 
 // Define the various states we'll use to track our progress
 #define STATE_DISCONNECTED     0

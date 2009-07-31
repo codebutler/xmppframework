@@ -9,7 +9,10 @@
 @class XMPPMessage;
 @class XMPPPresence;
 @class MulticastDelegate;
+
+#ifndef TARGET_OS_IPHONE
 @class SCNotificationManager;
+#endif
 
 @interface XMPPClient : NSObject
 {
@@ -32,7 +35,9 @@
 	
 	NSMutableArray *earlyPresenceElements;
 	
+#ifndef	TARGET_OS_IPHONE
 	SCNotificationManager *scNotificationManager;
+#endif
 }
 
 - (id)init;

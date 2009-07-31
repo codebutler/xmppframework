@@ -21,7 +21,7 @@
 - (void)addAttribute:(DDXMLNode *)attribute;
 - (void)removeAttributeForName:(NSString *)name;
 - (void)setAttributes:(NSArray *)attributes;
-//- (void)setAttributesAsDictionary:(NSDictionary *)attributes;
+- (void)setAttributesAsDictionary:(NSDictionary *)attributes;
 - (NSArray *)attributes;
 - (DDXMLNode *)attributeForName:(NSString *)name;
 //- (DDXMLNode *)attributeForLocalName:(NSString *)localName URI:(NSString *)URI;
