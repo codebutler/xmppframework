@@ -38,4 +38,7 @@
 - (IBAction)removeBuddy:(id)sender;
 - (IBAction)signIn:(id)sender;
 
+
+- (IBAction)handleQuit:(id)sender;
+
 @end

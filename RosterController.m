@@ -48,11 +48,32 @@
 		[connectionTabs selectTabViewItemAtIndex:0];
 	}
 	
+	NSAppleEventManager *sharedEventManager = [NSAppleEventManager sharedAppleEventManager];
+	[sharedEventManager setEventHandler:self
+							andSelector:@selector(handleQuitAppleEvent:withReplyEvent:)
+						  forEventClass:kCoreEventClass
+							 andEventID:kAEQuitApplication];	
+	
 	[NSApp beginSheet:signInSheet
 	   modalForWindow:window
 		modalDelegate:self
 	   didEndSelector:nil
 		  contextInfo:nil];
+}
+
+- (void)handleQuitAppleEvent:(NSAppleEventDescriptor *)event
+			  withReplyEvent:(NSAppleEventDescriptor *)replyEvent
+{
+	[self handleQuit:nil];
+}
+
+- (IBAction)handleQuit:(id)sender
+{
+	// end all active sheets
+	for (NSWindow *win in [NSApp windows])
+		if ([win attachedSheet])
+			[NSApp endSheet:[win attachedSheet]];
+	[NSApp terminate:nil];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
