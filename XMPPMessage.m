@@ -1,6 +1,6 @@
 #import "XMPPMessage.h"
 #import "XMPPJID.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
 
 @implementation XMPPMessage

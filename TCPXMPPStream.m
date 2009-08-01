@@ -2,7 +2,7 @@
 #import "TCPXMPPStream.h"
 #import "AsyncSocket.h"
 #import "XMPPStreamDelegate.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 #import "NSDataAdditions.h"
 #import "XMPPIQ.h"
 #import "XMPPMessage.h"

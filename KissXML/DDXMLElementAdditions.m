@@ -1,22 +1,22 @@
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
-@implementation NSXMLElement (XMPPStreamAdditions)
+@implementation DDXMLElement (DDAdditions)
 
 /**
  * Quick method to create an element
 **/
-+ (NSXMLElement *)elementWithName:(NSString *)name xmlns:(NSString *)ns
++ (DDXMLElement *)elementWithName:(NSString *)name xmlns:(NSString *)ns
 {
-	NSXMLElement *element = [NSXMLElement elementWithName:name];
+	DDXMLElement *element = [DDXMLElement elementWithName:name];
 	[element setXmlns:ns];
 	return element;
 }
 
 /**
- * This method returns the first child element for the given name (as an NSXMLElement).
- * If no child elements exist for the given name, nil is returned.
+ * This method returns the first child element for the given name.
+ * If no child element exists for the given name, returns nil.
 **/
-- (NSXMLElement *)elementForName:(NSString *)name
+- (DDXMLElement *)elementForName:(NSString *)name
 {
 	NSArray *elements = [self elementsForName:name];
 	if([elements count] > 0)
@@ -25,6 +25,8 @@
 	}
 	else
 	{
+		// Note: If you port this code to work with Apple's NSXML, beware of the following:
+		// 
 		// There is a bug in the NSXMLElement elementsForName: method.
 		// Consider the following XML fragment:
 		// 
@@ -41,16 +43,18 @@
 		// so in this particular case there is no way to access the element without looping through the children.
 		// 
 		// This bug was submitted to apple on June 1st, 2007 and was classified as "serious".
+		// 
+		// --!!-- This bug does NOT exist in DDXML --!!--
 		
 		return nil;
 	}
 }
 
 /**
- * This method returns the first child element for the given name and given xmlns (as an NSXMLElement).
- * If no child elements exist for the given name and given xmlns, nil is returned.
+ * This method returns the first child element for the given name and given xmlns.
+ * If no child elements exist for the given name and given xmlns, returns nil.
 **/
-- (NSXMLElement *)elementForName:(NSString *)name xmlns:(NSString *)xmlns
+- (DDXMLElement *)elementForName:(NSString *)name xmlns:(NSString *)xmlns
 {
 	NSArray *elements = [self elementsForLocalName:name URI:xmlns];
 	if([elements count] > 0)
@@ -74,33 +78,34 @@
 
 - (void)setXmlns:(NSString *)ns
 {
-	// If we use setURI: then the xmlns won't be displayed in the XMLString.
+	// If you use setURI: then the xmlns won't be displayed in the XMLString.
 	// Adding the namespace this way works properly.
+	// 
+	// This applies to both Apple's NSXML and DDXML.
 	
-	[self addNamespace:[NSXMLNode namespaceWithName:@"" stringValue:ns]];
+	[self addNamespace:[DDXMLNode namespaceWithName:@"" stringValue:ns]];
 }
 
 /**
- *	Shortcut to avoid having to use NSXMLNode everytime
+ *	Shortcut to avoid having to manually create a DDXMLNode everytime.
 **/
-
 - (void)addAttributeWithName:(NSString *)name stringValue:(NSString *)string
 {
-	[self addAttribute:[NSXMLNode attributeWithName:name stringValue:string]];
+	[self addAttribute:[DDXMLNode attributeWithName:name stringValue:string]];
 }
 
 /**
- * Returns all the attributes in a dictionary.
+ * Returns all the attributes as a dictionary.
 **/
 - (NSDictionary *)attributesAsDictionary
 {
 	NSArray *attributes = [self attributes];
 	NSMutableDictionary *result = [NSMutableDictionary dictionaryWithCapacity:[attributes count]];
 	
-	int i;
+	uint i;
 	for(i = 0; i < [attributes count]; i++)
 	{
-		NSXMLNode *node = [attributes objectAtIndex:i];
+		DDXMLNode *node = [attributes objectAtIndex:i];
 		
 		[result setObject:[node stringValue] forKey:[node name]];
 	}

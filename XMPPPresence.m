@@ -1,5 +1,5 @@
 #import "XMPPPresence.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
 
 @implementation XMPPPresence

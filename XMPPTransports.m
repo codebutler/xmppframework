@@ -1,7 +1,7 @@
 #import "XMPPTransports.h"
 #import "XMPPClient.h"
 #import "XMPPJID.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
 
 @implementation XMPPTransports

@@ -7,7 +7,7 @@
 #import "XMPPIQ.h"
 #import "XMPPMessage.h"
 #import "XMPPPresence.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 #import "MulticastDelegate.h"
 
 #ifndef TARGET_OS_IPHONE

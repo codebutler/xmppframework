@@ -1,5 +1,5 @@
 #import "XMPPIQ.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
 
 @implementation XMPPIQ

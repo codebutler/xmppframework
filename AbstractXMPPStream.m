@@ -1,5 +1,5 @@
 #import "DDXML.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 #import "NSDataAdditions.h"
 
 #import "XMPPStreamDelegate.h"

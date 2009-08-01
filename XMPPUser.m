@@ -3,7 +3,7 @@
 #import "XMPPIQ.h"
 #import "XMPPPresence.h"
 #import "XMPPResource.h"
-#import "NSXMLElementAdditions.h"
+#import "DDXMLElementAdditions.h"
 
 
 @implementation XMPPUser
@@ -280,7 +280,7 @@
  * This method compares the two users according to their name.
  * If either of the users has no set name (or has an empty string name), the name is considered to be the JID.
  * 
- * Options for the search Ñ you can combine any of the following using a C bitwise OR operator:
+ * Options for the search â€” you can combine any of the following using a C bitwise OR operator:
  * NSCaseInsensitiveSearch, NSLiteralSearch, NSNumericSearch.
  * See "String Programming Guide for Cocoa" for details on these options.
 **/
