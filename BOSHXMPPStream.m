@@ -40,7 +40,7 @@
 	xmppHostName = [vHostName copy];	
 	
 	[rootElement release];
-	rootElement = [[NSXMLElement alloc] init];
+	rootElement = [[NSXMLElement alloc] initWithName:@"root"];
 		
 	state = STATE_CONNECTING;
 	
@@ -74,6 +74,9 @@
 {
 	[requests removeObject:request];
 	
+	// FIXME: Handle this:
+	// <body xmlns='http://jabber.org/protocol/httpbind' type='terminate' condition='remote-connection-failed'/>
+	
 	if ([[element children] count] > 0) {		
 		// FIXME: Can we get rid of this crap?
 		if(state == STATE_CONNECTING)
@@ -82,7 +85,7 @@
 
 			// The first thing we expect to receive is <stream:features>
 			if (![[firstChild name] isEqualToString:@"stream:features"]) {
-				NSLog(@"asdasdasd");
+				NSLog(@"Expected <stream:features>, got <%@>", [firstChild name]);
 				return;
 			}
 						

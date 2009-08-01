@@ -57,7 +57,7 @@
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-	NSLog(@"connection did fail with error!");
+	NSLog(@"connection did fail with error! %@", error);
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)resp
