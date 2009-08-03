@@ -20,13 +20,7 @@
 		request = [[NSMutableURLRequest alloc] initWithURL:url];
 		[request setHTTPMethod:@"POST"];
 		[request setHTTPBody:theData];
-
-		NSData *data = [request HTTPBody];
 		
-		NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-		NSLog(@"Will send: %@", dataString);
-		[dataString release];
-
 		connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
 	}
 	return self;
@@ -38,39 +32,55 @@
 	[connection release];
 	[buffer release];
 	[response release];
+	[stream release];
 	[super dealloc];
 }
 
 - (void)start
 {
-	NSString *dataString = [[NSString alloc] initWithData:[request HTTPBody] encoding:NSUTF8StringEncoding];
-	NSLog(@"Going to send: %@", dataString);
-	[dataString release];
+	if (DEBUG_SEND) {
+		NSString *dataString = [[NSString alloc] initWithData:[request HTTPBody] encoding:NSUTF8StringEncoding];
+		NSLog(@"SEND: %@", dataString);
+		[dataString release];
+	}
 	
 	[connection start];
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
-	NSLog(@"Connection did finish loading!");
+	if ([response expectedContentLength] != buffer.length) 
+	{
+		NSString *errMsg = [NSString stringWithFormat:@"Connection lost before all data was received. Expected %d, Got: %d", 
+							[response expectedContentLength],
+							buffer.length];
+		NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+		NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+		
+		[stream onDidReceiveError:err];		
+	}		
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-	NSLog(@"connection did fail with error! %@", error);
+	[stream onDidReceiveError:error];
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)resp
 {
 	NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)resp;
 	
-	NSLog(@"connection did receive response!");
-	NSLog(@"status: %d", [httpResponse statusCode]);
-	NSLog(@"content-length: %d", [httpResponse expectedContentLength]);
-	
-	// FIXME: Handle this better.
-	if ([httpResponse expectedContentLength] == 0)
-		return;
+	if ([httpResponse statusCode] != 200 &&
+		[httpResponse expectedContentLength] == 0)
+	{
+		// We're not going to receive any data, so fire the error here (otherwise it happens in didReceiveData)
+				
+		NSString *errMsg = [NSString stringWithFormat:@"HTTP Error %d", [httpResponse statusCode]];
+		NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+		NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+		
+		[stream onDidReceiveError:err];
+	}
 	
 	buffer = [[NSMutableData dataWithCapacity:[httpResponse expectedContentLength]] retain];
 	
@@ -79,12 +89,16 @@
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-	// FIXME: throw an error
-	if ([response expectedContentLength] == 0) {
-		NSLog(@"We didn't want any data!! Got: %d", [data length]);
-		return;
-	} else if (buffer.length + data.length > [response expectedContentLength]) {
-		NSLog(@"TOO MUCH AAHH!!! Have: %d Got: %d Expected %d", [buffer length], [data length], [response expectedContentLength]);
+	if ((buffer.length + data.length) > [response expectedContentLength]) 
+	{
+		NSString *errMsg = [NSString stringWithFormat:@"Received too much data. Expected: %d, Got: %d",
+							[response expectedContentLength],
+							(buffer.length + data.length)];
+		NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+		NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+		
+		[stream onDidReceiveError:err];			
+		
 		return;
 	}
 
@@ -93,7 +107,20 @@
 	if ([buffer length] == [response expectedContentLength]) {	
 		NSString *body = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
 
-		NSLog(@"Did receive data! %@", body);
+		if (DEBUG_RECV) {
+			NSLog(@"RECV: %@", body);
+		}
+		
+		if ([response statusCode] != 200) 
+		{			
+			NSString *errMsg = [NSString stringWithFormat:@"HTTP Error %d: %@", [response statusCode], body];
+			NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+			NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+			
+			[stream onDidReceiveError:err];			
+			
+			return;
+		}
 		
 		NSError *error = nil;	
 		NSXMLElement *element = [[NSXMLElement alloc] initWithXMLString:body error:&error];
@@ -101,18 +128,23 @@
 		[body release];
 		
 		// FIXME: throw an error
-		if (![[element name] isEqualToString:@"body"]) {
-			NSLog(@"aack1!! %@", [element name]);
+		if (![[element name] isEqualToString:@"body"]) 
+		{
+			NSString *errMsg = [NSString stringWithFormat:@"Bad wrapper element! Expected <body>, Got: %@", 
+								[element name]];
+			NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+			NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+			
+			[stream onDidReceiveError:err];			
+			
 			return;
 		}
-				
-		if ([stream respondsToSelector:@selector(request:didReceiveElement:)]) {
-			[stream request:self didReceiveElement:element];
-		}
+
+		[stream request:self didReceiveElement:element];
 		
 		[element release];
 	} else {
-		NSLog(@"Still waiting for %d bytes", [response expectedContentLength] - [buffer length]);
+		// We're waiting for more data - this method will be called again.
 	}
 }
 

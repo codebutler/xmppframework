@@ -9,6 +9,7 @@
 #import "BOSHXMPPStream.h"
 #import "BOSHXMPPRequest.h"
 #import "XMPPNamespaces.h"
+#import "XMPPStreamDelegate.h"
 
 @implementation BOSHXMPPStream
 
@@ -85,7 +86,13 @@
 
 			// The first thing we expect to receive is <stream:features>
 			if (![[firstChild name] isEqualToString:@"stream:features"]) {
-				NSLog(@"Expected <stream:features>, got <%@>", [firstChild name]);
+				
+				NSString *errMsg = [NSString stringWithFormat:@"Expected <stream:features>, got: %@", [firstChild name]];
+				NSDictionary *info = [NSDictionary dictionaryWithObject:errMsg forKey:NSLocalizedDescriptionKey];
+				NSError *err = [NSError errorWithDomain:@"XMPP" code:-1 userInfo:info];
+				
+				[self onDidReceiveError:err];
+
 				return;
 			}
 						
@@ -111,7 +118,7 @@
 
 		}
 	} else {
-		NSLog(@"AH!!!! %@", [element XMLString]);
+		// Received empty <body/> - This just means there's nothing to receive.
 	}
 	
 	if ([sendQueue count] == 0) {
@@ -131,22 +138,54 @@
 	}
 }
 
-- (void)disconnect {
+- (void)disconnect 
+{
+	state = STATE_DISCONNECTED;
 	
+	isSecure = NO;
+	isAuthenticated = NO;
+	
+	[rootElement release];
+	rootElement = nil;
+	
+	[sid release];
+	sid = nil;
+	
+	[authId release];
+	authId = nil;
+	
+	rid = 0;
+	
+	// FIXME: Whoever started these requests will want to know they weren't sent.
+	// Create a didNotSendElementWithTag:(long)tag error:(NSError*)err delegate method
+	// and fire them off for everything here.
+	[requests removeAllObjects];	
+	[sendQueue removeAllObjects];
+	
+	// Notify delegate
+	if([delegate respondsToSelector:@selector(xmppStreamDidClose:)]) {
+		[delegate xmppStreamDidClose:self];
+	} else if(DEBUG_DELEGATE) {
+		NSLog(@"xmppStreamDidClose:%p", self);
+	}	
 }
 
 - (void)disconnectAfterSending {
-	
+	// FIXME: Implement this.
+	[self doesNotRecognizeSelector:_cmd];
 }
 
-- (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag {
-	// FIXME: Do we care about timeout/tag?
+- (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag 
+{
+	// FIXME: We should do something with timeout
 	
 	NSString *bodyOpen = [NSString stringWithFormat:@"<body rid=\"%@\" sid=\"%@\" xmlns=\"%@\">", 
 						  [self getRid], sid, NS_HTTPBIND, nil];
 	NSString *body = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 	NSString *bodyClose = @"</body>";
 	NSString *fullText = [[NSString alloc] initWithFormat:@"%@%@%@", bodyOpen, body, bodyClose];
+	
+	// FIXME: Create a BOSHXMPPRequest here sintead of later so we can keep track of the tag.
 	
 	NSData *fullData = [fullText dataUsingEncoding:NSUTF8StringEncoding];	
 	[self queueData:fullData];
@@ -188,9 +227,7 @@
 						  @"urn:xmpp:xbosh", @"xmlns:xmpp",
 						  nil];	
 	[element setAttributesAsDictionary:dict];
-	
-	NSLog(@"restart !!! %@", [element XMLString]);
-	
+		
 	state = STATE_OPENING;
 	
 	NSData *data = [[element XMLString] dataUsingEncoding:NSUTF8StringEncoding];
@@ -208,6 +245,18 @@
 	{
 		// FIXME: Do something here.
 	}
+}
+
+- (void)onDidReceiveError:(NSError *)err
+{
+	if([delegate respondsToSelector:@selector(xmppStream:didReceiveError:)]) {
+		[delegate xmppStream:self didReceiveError:err];
+	}
+	else if(DEBUG_DELEGATE) {
+		NSLog(@"xmppStream:%p didReceiveError:%@", self, err);
+	}
+	
+	[self disconnect];	
 }
 
 @end

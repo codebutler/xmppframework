@@ -39,4 +39,6 @@
 
 - (void)queueData:(NSData *)data;
 
+- (void)onDidReceiveError:(NSError *)err;
+
 @end
