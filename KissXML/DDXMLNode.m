@@ -369,6 +369,23 @@ static void MyErrorHandler(void * userData, xmlErrorPtr error);
 		else
 			return @"";
 	}
+	else if ([self isXmlNodePtr]) {
+		xmlNodePtr nodePtr = (xmlNodePtr)genericPtr;
+		
+		const char *name = (const char *)nodePtr->name;
+		const char *prefix = NULL;
+
+		if(name == NULL)
+			return nil;
+		
+		if (nodePtr->ns) {
+			prefix = (const char *)nodePtr->ns->prefix;
+			if (prefix)
+				return [NSString stringWithFormat:@"%s:%s", prefix, name];
+		}
+		
+		return [NSString stringWithUTF8String:name];			
+	}
 	else
 	{
 		const char *name = (const char *)((xmlStdPtr)genericPtr)->name;

@@ -192,7 +192,10 @@
 			BOOL match = NO;
 			if(uri == nil)
 			{
-				match = xmlStrEqual(child->name, [name xmlChar]);
+				if (hasPrefix && child->ns)
+					match = [name isEqualToString:[NSString stringWithFormat:@"%s:%s", child->ns->prefix, child->name]];
+				else				
+					match = xmlStrEqual(child->name, [name xmlChar]);
 			}
 			else
 			{
