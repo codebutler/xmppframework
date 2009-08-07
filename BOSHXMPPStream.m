@@ -13,6 +13,7 @@
 
 @implementation BOSHXMPPStream
 
+@synthesize requestThread;
 @synthesize bindUrl;
 
 - (void)setup {
@@ -131,10 +132,7 @@
 		NSData *data = [[sendQueue lastObject] retain];
 		[sendQueue removeLastObject];
 		
-		BOSHXMPPRequest *request = [[BOSHXMPPRequest alloc] initWithStream:self bodyData:data];
-		[requests addObject:request];
-		[request release];
-		[request start];
+		[self startRequestWithData:data];
 	}
 }
 
@@ -198,10 +196,7 @@
 - (void)queueData:(NSData *)data {
 	if ([requests count] < 2) {
 		// Send request		
-		BOSHXMPPRequest *request = [[BOSHXMPPRequest alloc] initWithStream:self bodyData:data];
-		[requests addObject:request];
-		[request release];
-		[request start];
+		[self startRequestWithData:data];
 	} else {
 		[sendQueue insertObject:data atIndex:0];
 		// FIXME: I think the ref count on data is different for different code paths.
@@ -238,6 +233,21 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Helper Methods:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+- (void)startRequestWithData:(NSData *)data
+{	
+	if (requestThread != nil)
+		[self performSelector:@selector(startRequestWithDataForReals:) onThread:requestThread withObject:data waitUntilDone:NO];
+}
+
+- (void)startRequestWithDataForReals:(id)obj
+{
+	NSData *data = (NSData *)obj;
+	BOSHXMPPRequest *request = [[BOSHXMPPRequest alloc] initWithStream:self bodyData:data];
+	[requests addObject:request];
+	[request release];
+	[request start];
+}
 
 - (void)keepAlive:(NSTimer *)aTimer
 {

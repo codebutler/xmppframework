@@ -20,7 +20,11 @@
 	uint rid;
 	NSMutableArray *requests;
 	NSMutableArray *sendQueue;
+	
+	NSThread *requestThread;
 }
+
+@property (retain) NSThread *requestThread;
 
 @property (copy) NSString* bindUrl;
 
@@ -40,5 +44,8 @@
 - (void)queueData:(NSData *)data;
 
 - (void)onDidReceiveError:(NSError *)err;
+
+// Move to private api category
+- (void)startRequestWithData:(NSData *)data;
 
 @end
