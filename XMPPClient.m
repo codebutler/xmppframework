@@ -2,11 +2,11 @@
 #import "AbstractXMPPStream.h"
 #import "TCPXMPPStream.h"
 #import "XMPPJID.h"
-#import "XMPPUser.h"
-#import "XMPPResource.h"
 #import "XMPPIQ.h"
 #import "XMPPMessage.h"
 #import "XMPPPresence.h"
+#import "XMPPRosterManager.h"
+#import "XMPPPresenceManager.h"
 #import "DDXMLElementAdditions.h"
 #import "MulticastDelegate.h"
 
@@ -35,12 +35,9 @@ enum XMPPClientFlags
 - (void)onDidNotRegister:(NSXMLElement *)error;
 - (void)onDidAuthenticate;
 - (void)onDidNotAuthenticate:(NSXMLElement *)error;
-- (void)onDidUpdateRoster;
-- (void)onDidReceiveBuddyRequest:(XMPPJID *)jid;
+- (void)onDidReceivePresence:(NSXMLElement *)presence;
 - (void)onDidReceiveIQ:(XMPPIQ *)iq;
 - (void)onDidReceiveMessage:(XMPPMessage *)message;
-
-- (void)xmppStream:(AbstractXMPPStream *)sender didReceivePresence:(XMPPPresence *)presence;
 @end
 
 @implementation XMPPClient
@@ -60,9 +57,8 @@ enum XMPPClientFlags
 		[self setAutoRoster:YES];
 		[self setAutoReconnect:YES];
 
-		roster = [[NSMutableDictionary alloc] initWithCapacity:10];
-		
-		earlyPresenceElements = [[NSMutableArray alloc] initWithCapacity:2];
+		rosterManager = [[XMPPRosterManager alloc] initWithXMPPClient:self];		
+		presenceManager = [[XMPPPresenceManager alloc] initWithXMPPClient:self];
 
 #ifndef TARGET_OS_IPHONE
 		scNotificationManager = [[SCNotificationManager alloc] init];
@@ -90,10 +86,8 @@ enum XMPPClientFlags
 	[xmppStream release];
 	[streamError release];
 	
-	[roster release];
-	[myUser release];
-	
-	[earlyPresenceElements release];
+	[rosterManager release];
+	[presenceManager release];
 	
 #ifndef TARGET_OS_IPHONE
 	[scNotificationManager release];
@@ -378,18 +372,6 @@ enum XMPPClientFlags
 	[presence addAttributeWithName:@"type" stringValue:@"unavailable"];
 	
 	[xmppStream sendElement:presence];
-	
-	// Remove all users from our roster when we're offline.
-	// We don't receive presence notifications when we're offline.
-	
-	BOOL didUpdateRoster = ([roster count] > 0);
-	[roster removeAllObjects];
-	[self setHasRoster:NO];
-	
-	if(didUpdateRoster)
-	{
-		[self onDidUpdateRoster];
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -402,88 +384,6 @@ enum XMPPClientFlags
 	
 	NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
 	[iq addAttributeWithName:@"type" stringValue:@"get"];
-	[iq addChild:query];
-	
-	[xmppStream sendElement:iq];
-}
-
-- (void)addBuddy:(XMPPJID *)jid withNickname:(NSString *)optionalName
-{
-	if(jid == nil) return;
-	
-	if([[myJID bare] isEqualToString:[jid bare]])
-	{
-		// No, you don't need to add yourself
-		return;
-	}
-	
-	// Add the buddy to our roster
-	NSXMLElement *item = [NSXMLElement elementWithName:@"item"];
-	[item addAttributeWithName:@"jid" stringValue:[jid bare]];
-	if(optionalName)
-	{
-		[item addAttributeWithName:@"name" stringValue:optionalName];
-	}
-	
-	NSXMLElement *query = [NSXMLElement elementWithName:@"query" xmlns:@"jabber:iq:roster"];
-	[query addChild:item];
-		
-	NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
-	[iq addAttributeWithName:@"type" stringValue:@"set"];
-	[iq addChild:query];
-	
-	[xmppStream sendElement:iq];
-	
-	// Subscribe to the buddy's presence
-	NSXMLElement *presence = [NSXMLElement elementWithName:@"presence"];
-	[presence addAttributeWithName:@"to" stringValue:[jid bare]];
-	[presence addAttributeWithName:@"type" stringValue:@"subscribe"];
-	
-	[xmppStream sendElement:presence];
-}
-
-- (void)removeBuddy:(XMPPJID *)jid
-{
-	if(jid == nil) return;
-	
-	if([[myJID bare] isEqualToString:[jid bare]])
-	{
-		// No, you shouldn't remove yourself
-		return;
-	}
-	
-	// Remove the buddy from our roster
-	// Unsubscribe from presence
-	// And revoke contact's subscription to our presence
-	// ...all in one step
-	
-	NSXMLElement *item = [NSXMLElement elementWithName:@"item"];
-	[item addAttributeWithName:@"jid" stringValue:[jid bare]];
-	[item addAttributeWithName:@"subscription" stringValue:@"remove"];
-	
-	NSXMLElement *query = [NSXMLElement elementWithName:@"query" xmlns:@"jabber:iq:roster"];
-	[query addChild:item];
-	
-	NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
-	[iq addAttributeWithName:@"type" stringValue:@"set"];
-	[iq addChild:query];
-	
-	[xmppStream sendElement:iq];
-}
-
-- (void)setNickname:(NSString *)nickname forBuddy:(XMPPJID *)jid
-{
-	if(jid == nil) return;
-	
-	NSXMLElement *item = [NSXMLElement elementWithName:@"item"];
-	[item addAttributeWithName:@"jid" stringValue:[jid bare]];
-	[item addAttributeWithName:@"name" stringValue:nickname];
-	
-	NSXMLElement *query = [NSXMLElement elementWithName:@"query" xmlns:@"jabber:iq:roster"];
-	[query addChild:item];
-	
-	NSXMLElement *iq = [NSXMLElement elementWithName:@"iq"];
-	[iq addAttributeWithName:@"type" stringValue:@"set"];
 	[iq addChild:query];
 	
 	[xmppStream sendElement:iq];
@@ -529,131 +429,14 @@ enum XMPPClientFlags
 	[xmppStream sendElement:response];
 }
 
-- (NSArray *)sortedUsersByName
+- (XMPPRosterManager *)rosterManager
 {
-	return [[roster allValues] sortedArrayUsingSelector:@selector(compareByName:)];
+	return rosterManager;
 }
 
-- (NSArray *)sortedUsersByAvailabilityName
+- (XMPPPresenceManager *)presenceManager
 {
-	return [[roster allValues] sortedArrayUsingSelector:@selector(compareByAvailabilityName:)];
-}
-
-- (NSArray *)sortedAvailableUsersByName
-{
-	return [[self unsortedAvailableUsers] sortedArrayUsingSelector:@selector(compareByName:)];
-}
-
-- (NSArray *)sortedUnavailableUsersByName
-{
-	return [[self unsortedUnavailableUsers] sortedArrayUsingSelector:@selector(compareByName:)];
-}
-
-- (NSArray *)unsortedUsers
-{
-	return [roster allValues];
-}
-
-- (NSArray *)unsortedAvailableUsers
-{
-	NSArray *allUsers = [roster allValues];
-	
-	NSMutableArray *result = [NSMutableArray arrayWithCapacity:[allUsers count]];
-	
-	int i;
-	for(i = 0; i < [allUsers count]; i++)
-	{
-		XMPPUser *currentUser = [allUsers objectAtIndex:i];
-		if([currentUser isOnline])
-		{
-			[result addObject:currentUser];
-		}
-	}
-	
-	return result;
-}
-
-- (NSArray *)unsortedUnavailableUsers
-{
-	NSArray *allUsers = [roster allValues];
-	
-	NSMutableArray *result = [NSMutableArray arrayWithCapacity:[allUsers count]];
-	
-	int i;
-	for(i = 0; i < [allUsers count]; i++)
-	{
-		XMPPUser *currentUser = [allUsers objectAtIndex:i];
-		if(![currentUser isOnline])
-		{
-			[result addObject:currentUser];
-		}
-	}
-	
-	return result;
-}
-
-- (NSArray *)sortedResources:(BOOL)includeResourcesForMyUserExcludingMyself
-{
-	// Add all the resouces from all the available users in the roster
-	NSArray *availableUsers = [self unsortedAvailableUsers];
-	
-	NSMutableArray *result = [NSMutableArray arrayWithCapacity:[availableUsers count]];
-	
-	NSUInteger i;
-	for(i = 0; i < [availableUsers count]; i++)
-	{
-		XMPPUser *user = [availableUsers objectAtIndex:i];
-		
-		[result addObjectsFromArray:[user unsortedResources]];
-	}
-	
-	if(includeResourcesForMyUserExcludingMyself)
-	{
-		// Now add all the available resources from our own user account (excluding ourselves)
-		
-		NSArray *myResources = [myUser unsortedResources];
-		
-		for(i = 0; i < [myResources count]; i++)
-		{
-			XMPPResource *resource = [myResources objectAtIndex:i];
-			
-			if(![myJID isEqual:[resource jid]])
-			{
-				[result addObject:resource];
-			}
-		}
-	}
-	
-	return [result sortedArrayUsingSelector:@selector(compare:)];
-}
-
-- (XMPPUser *)userForJID:(XMPPJID *)jid
-{
-	XMPPUser *result = [roster objectForKey:[jid bareJID]];
-	
-	if(result)
-	{
-		return result;
-	}
-	
-	if([[jid bareJID] isEqual:[myJID bareJID]])
-	{
-		return myUser;
-	}
-	
-	return nil;
-}
-
-- (XMPPResource *)resourceForJID:(XMPPJID *)jid
-{
-	XMPPUser *user = [self userForJID:jid];
-	
-	return [user resourceForJID:jid];
-}
-
-- (XMPPUser *)myUser
-{
-	return [[myUser retain] autorelease];
+	return presenceManager;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -722,14 +505,9 @@ enum XMPPClientFlags
 	[multicastDelegate xmppClient:self didNotAuthenticate:error];
 }
 
-- (void)onDidUpdateRoster
+- (void)onDidReceivePresence:(NSXMLElement *)presence
 {
-	[multicastDelegate xmppClientDidUpdateRoster:self];
-}
-
-- (void)onDidReceiveBuddyRequest:(XMPPJID *)jid
-{
-	[multicastDelegate xmppClient:self didReceiveBuddyRequest:jid];
+	[multicastDelegate xmppClient:self didReceivePresence:presence];
 }
 
 - (void)onDidReceiveIQ:(XMPPIQ *)iq
@@ -771,11 +549,7 @@ enum XMPPClientFlags
 	// We're now connected and properly authenticated
 	// Should we get accidentally disconnected we should automatically reconnect (if kAutoReconnect is set)
 	[self setShouldReconnect:YES];
-	
-	// Update myUser
-	[myUser release];
-	myUser = [[XMPPUser alloc] initWithJID:myJID];
-	
+		
 	// Note: Order matters in the calls below.
 	// We request the roster FIRST, because we need the roster before we can process any presence notifications.
 	// We shouldn't receive any presence notification until we've set our presence to available.
@@ -808,69 +582,7 @@ enum XMPPClientFlags
 
 - (void)xmppStream:(AbstractXMPPStream *)sender didReceiveIQ:(XMPPIQ *)iq
 {
-	if([iq isRosterQuery])
-	{
-		// Note: Some jabber servers send an iq element with a xmlns.
-		// Because of the bug in Apple's NSXML (documented in our elementForName method),
-		// it is important we specify the xmlns for the query.
-		
-		NSXMLElement *query = [iq elementForName:@"query" xmlns:@"jabber:iq:roster"];
-		NSArray *items = [query elementsForName:@"item"];
-		
-		int i;
-		for(i = 0; i < [items count]; i++)
-		{
-			NSXMLElement *item = (NSXMLElement *)[items objectAtIndex:i];
-			
-			// Filter out items for users who aren't actually in our roster.
-			// That is, those users who have requested to be our buddy, but we haven't approved yet.
-			if([XMPPIQ isRosterItem:item])
-			{
-				NSString *jidStr = [[item attributeForName:@"jid"] stringValue];
-				XMPPJID *jid = [XMPPJID jidWithString:jidStr];
-				
-				NSString *subscription = [[item attributeForName:@"subscription"] stringValue];
-				
-				if([subscription isEqualToString:@"remove"])
-				{
-					[roster removeObjectForKey:jid];
-				}
-				else
-				{
-					XMPPUser *user = [roster objectForKey:jid];
-					if(user)
-					{
-						[user updateWithItem:item];
-					}
-					else
-					{
-						XMPPUser *newUser = [[XMPPUser alloc] initWithItem:item];
-						[roster setObject:newUser forKey:jid];
-						[newUser release];
-					}
-				}
-			}
-		}
-		
-		[self onDidUpdateRoster];
-		
-		if(![self hasRoster])
-		{
-			// We should have our roster now
-			[self setHasRoster:YES];
-			
-			// Which means we can process any premature presence elements we received
-			for(i = 0; i < [earlyPresenceElements count]; i++)
-			{
-				[self xmppStream:xmppStream didReceivePresence:[earlyPresenceElements objectAtIndex:i]];
-			}
-			[earlyPresenceElements removeAllObjects];
-		}
-	}
-	else
-	{
-		[self onDidReceiveIQ:iq];
-	}
+	[self onDidReceiveIQ:iq];
 }
 
 - (void)xmppStream:(AbstractXMPPStream *)sender didReceiveMessage:(XMPPMessage *)message
@@ -880,52 +592,7 @@ enum XMPPClientFlags
 
 - (void)xmppStream:(AbstractXMPPStream *)sender didReceivePresence:(XMPPPresence *)presence
 {
-	if(![self hasRoster])
-	{
-		// We received a presence notification, but we don't have a roster to apply it to yet.
-		// We store the presence element until we get our roster.
-		[earlyPresenceElements addObject:presence];
-		
-		return;
-	}
-	
-	if([[presence type] isEqualToString:@"subscribe"])
-	{
-		XMPPUser *user = [roster objectForKey:[[presence from] bareJID]];
-		
-		if(user && [self autoRoster])
-		{
-			// Presence subscription request from someone who's already in our roster
-			// Automatically approve
-			
-			NSXMLElement *response = [NSXMLElement elementWithName:@"presence"];
-			[response addAttributeWithName:@"to" stringValue:[[presence from] bare]];
-			[response addAttributeWithName:@"type" stringValue:@"subscribed"];
-			
-			[xmppStream sendElement:response];
-		}
-		else
-		{
-			// Presence subscription request from someone who's NOT in our roster
-			
-			[self onDidReceiveBuddyRequest:[presence from]];
-		}
-	}
-	else
-	{
-		XMPPUser *rosterUser = [roster objectForKey:[[presence from] bareJID]];
-		
-		if(rosterUser)
-		{
-			[rosterUser updateWithPresence:presence];
-		}
-		else if([[myJID bareJID] isEqual:[[presence from] bareJID]])
-		{
-			[myUser updateWithPresence:presence];
-		}
-		
-		[self onDidUpdateRoster];
-	}
+	[self onDidReceivePresence:presence];
 }
 
 /**
@@ -954,12 +621,6 @@ enum XMPPClientFlags
 
 - (void)xmppStreamDidClose:(AbstractXMPPStream *)sender
 {
-	[roster removeAllObjects];
-	[self setHasRoster:NO];
-	
-	[myUser release];
-	myUser = nil;
-	
 	[self onDidDisconnect];
 }
 

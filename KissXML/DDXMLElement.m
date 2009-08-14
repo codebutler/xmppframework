@@ -543,9 +543,14 @@
 #pragma mark Children
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-- (void)removeChild:(xmlNodePtr)child
+- (void)removeChildPtr:(xmlNodePtr)child
 {
 	[[self class] removeChild:child fromNode:(xmlNodePtr)genericPtr];
+}
+
+- (void)removeChild:(DDXMLElement *)element
+{
+	[self removeChildPtr:(xmlNodePtr)element->genericPtr];
 }
 
 - (void)removeAllChildren
@@ -565,7 +570,7 @@
 		{
 			if(i == index)
 			{
-				[self removeChild:child];
+				[self removeChildPtr:child];
 				return;
 			}
 			

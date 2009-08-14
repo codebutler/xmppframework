@@ -17,7 +17,7 @@
 	{
 		[self addAttributeWithName:@"type" stringValue:type];
 		[self addAttributeWithName:@"to" stringValue:[to description]];
-	}
+	}			
 	return self;
 }
 

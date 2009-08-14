@@ -3,12 +3,12 @@
 
 @class AbstractXMPPStream;
 @class XMPPJID;
-@class XMPPUser;
-@class XMPPResource;
 @class XMPPIQ;
 @class XMPPMessage;
 @class XMPPPresence;
 @class MulticastDelegate;
+@class XMPPRosterManager;
+@class XMPPPresenceManager;
 
 #ifndef TARGET_OS_IPHONE
 @class SCNotificationManager;
@@ -29,11 +29,9 @@
 	
 	AbstractXMPPStream *xmppStream;
 	NSError *streamError;
-	
-	NSMutableDictionary *roster;
-	XMPPUser *myUser;
-	
-	NSMutableArray *earlyPresenceElements;
+		
+	XMPPRosterManager *rosterManager;
+	XMPPPresenceManager *presenceManager;
 	
 #ifndef	TARGET_OS_IPHONE
 	SCNotificationManager *scNotificationManager;
@@ -104,35 +102,16 @@
 
 - (void)fetchRoster;
 
-- (void)addBuddy:(XMPPJID *)jid withNickname:(NSString *)optionalName;
-- (void)removeBuddy:(XMPPJID *)jid;
-
-- (void)setNickname:(NSString *)nickname forBuddy:(XMPPJID *)jid;
-
 - (void)acceptBuddyRequest:(XMPPJID *)jid;
 - (void)rejectBuddyRequest:(XMPPJID *)jid;
-
-- (NSArray *)sortedUsersByName;
-- (NSArray *)sortedUsersByAvailabilityName;
-
-- (NSArray *)sortedAvailableUsersByName;
-- (NSArray *)sortedUnavailableUsersByName;
-
-- (NSArray *)unsortedUsers;
-- (NSArray *)unsortedAvailableUsers;
-- (NSArray *)unsortedUnavailableUsers;
-
-- (NSArray *)sortedResources:(BOOL)includeResourcesForMyUserExcludingMyself;
-
-- (XMPPUser *)userForJID:(XMPPJID *)jid;
-- (XMPPResource *)resourceForJID:(XMPPJID *)jid;
-
-- (XMPPUser *)myUser;
 
 - (void)sendElement:(NSXMLElement *)element;
 - (void)sendElement:(NSXMLElement *)element andNotifyMe:(long)tag;
 
 - (void)sendMessage:(NSString *)message toJID:(XMPPJID *)jid;
+
+- (XMPPRosterManager *)rosterManager;
+- (XMPPPresenceManager *)presenceManager;
 
 @end
 
@@ -153,11 +132,7 @@
 - (void)xmppClientDidAuthenticate:(XMPPClient *)sender;
 - (void)xmppClient:(XMPPClient *)sender didNotAuthenticate:(NSXMLElement *)error;
 
-- (void)xmppClientDidUpdateRoster:(XMPPClient *)sender;
-
-- (void)xmppClient:(XMPPClient *)sender didReceiveBuddyRequest:(XMPPJID *)jid;
-
 - (void)xmppClient:(XMPPClient *)sender didReceiveIQ:(XMPPIQ *)iq;
 - (void)xmppClient:(XMPPClient *)sender didReceiveMessage:(XMPPMessage *)message;
-
+- (void)xmppClient:(XMPPClient *)sender didReceivePresence:(NSXMLElement *)presence;
 @end

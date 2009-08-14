@@ -4,11 +4,56 @@
 
 @implementation XMPPIQ
 
++ (XMPPIQ *)iq
+{
+	XMPPIQ *iq = [[XMPPIQ alloc] init];
+	return [iq autorelease];
+}
+
 + (XMPPIQ *)iqFromElement:(NSXMLElement *)element
 {
 	XMPPIQ *result = (XMPPIQ *)element;
 	result->isa = [XMPPIQ class];
 	return result;
+}
+
+- (XMPPIQType)type
+{
+	NSString *typeStr = [[self attributeForName:@"type"] stringValue];
+	if ([typeStr isEqualToString:@"get"])
+		return IQTYPE_GET;
+	else if ([typeStr isEqualToString:@"set"])
+		return IQTYPE_SET;
+	else if ([typeStr isEqualToString:@"result"])
+		return IQTYPE_RESULT;
+	else if ([typeStr isEqualToString:@"error"])
+		return IQTYPE_ERROR;
+	else
+		return -1;
+}
+
+- (void)setType:(XMPPIQType)type
+{
+	NSString *typeStr = @"";
+	switch (type) {
+		case IQTYPE_GET:
+			typeStr = @"get";
+			break;
+		case IQTYPE_SET:
+			typeStr = @"set";
+			break;
+		case IQTYPE_RESULT:
+			typeStr = @"result";
+			break;
+		case IQTYPE_ERROR:
+			typeStr = @"error";
+	}
+	
+	NSXMLNode *attr = [self attributeForName:@"type"];
+	if (!attr) {
+		[self addAttributeWithName:@"type" stringValue:typeStr];
+	} else
+		[attr setStringValue:typeStr];
 }
 
 /**
@@ -50,7 +95,17 @@
 	NSXMLElement *query = [self elementForName:@"query" xmlns:@"jabber:iq:roster"];
 	
 	return (query != nil);
+}
 
+- (NSXMLElement *)query
+{
+	return [self elementForName:@"query"];
+}
+
+- (void)setQuery:(NSXMLElement *)query
+{
+	[self setStringValue:@""];
+	[self addChild:query];
 }
 
 @end

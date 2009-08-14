@@ -41,6 +41,7 @@
 - (void)insertChild:(DDXMLNode *)child atIndex:(NSUInteger)index;
 //- (void)insertChildren:(NSArray *)children atIndex:(NSUInteger)index;
 - (void)removeChildAtIndex:(NSUInteger)index;
+- (void)removeChild:(DDXMLElement *)element;
 - (void)setChildren:(NSArray *)children;
 - (void)addChild:(DDXMLNode *)child;
 //- (void)replaceChildAtIndex:(NSUInteger)index withNode:(DDXMLNode *)node;
